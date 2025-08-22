@@ -1,10 +1,34 @@
 package com.mytest.oplib.dto;
 
-import org.apache.catalina.connector.Response;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-public record BookBestResponse(Response response) {
+import java.util.List;
 
-    public record Response(Header header, Body body) {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record BookBestResponse(Envelope response) {
 
-    }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Envelope(Header header, Body body) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Header(String resultMsg, String resultCode) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Body(String totalCount, Items items, String pageNo, String numOfRows) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Items(List<Item> item) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Item(
+            String rank,
+            String title,
+            String author,
+            String publisher,
+            String shelf_loc_name,
+            String cnt,
+            String publish_year,
+            String lib_name,
+            String image
+    ) {}
 }

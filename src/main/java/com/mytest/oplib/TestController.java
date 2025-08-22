@@ -30,7 +30,10 @@ public class TestController {
                 .build(true)                                     // 자동 인코딩
                 .toUri();
 
-        String body = restClient.get().uri(uri).retrieve().body(String.class);
+        String body = restClient.get()
+                .uri(uri)
+                .retrieve()
+                .body(String.class);
 
         return ResponseEntity.ok(body); // 원문 그대로 반환(맛보기)
     }
