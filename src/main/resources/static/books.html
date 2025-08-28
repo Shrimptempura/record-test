@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>주간 인기 대출 도서</title>
+    <style>
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .card img {
+            width: 100px;
+            height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+<h1>주간 인기 대출 도서</h1>
+<div id="grid" class="grid"></div>
+
+<script>
+    fetch('/api/busan/weekly-best/top')
+        .then(res => res.json())
+        .then(list => {
+            const html = list.map(b => `
+      <div class="card">
+        <img src="${b.image}" alt="cover"/>
+        <div><b>${b.title}</b></div>
+        <div>${b.author}</div>
+        <div style="font-size:12px;color:gray">${b.libName}</div>
+      </div>
+    `).join('');
+            document.getElementById('grid').innerHTML = html;
+        });
+</script>
+</body>
+</html>
