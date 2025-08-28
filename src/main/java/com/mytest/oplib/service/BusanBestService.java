@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,18 +33,18 @@ public class BusanBestService {
      */
     private URI buildUri(int pageNo, int numOfRows, String title, String author) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
-                .queryParam("serviceKey", props.getServiceKey())
+                .queryParam("serviceKey", props.getServiceKey().trim())
                 .queryParam("pageNo", pageNo)
                 .queryParam("numOfRows", numOfRows)
                 .queryParam("resultType", "json");
 
         // null/빈문자열/공백 문자열을 -> 값 없음 처리
         if (StringUtils.hasText(title)) {
-            builder.queryParam("title", title.trim());
+            builder.queryParam("title", UriUtils.encode(title.trim(), StandardCharsets.UTF_8));
         }
 
         if (StringUtils.hasText(author)) {
-            builder.queryParam("author", author.trim());
+            builder.queryParam("author", UriUtils.encode(author.trim(), StandardCharsets.UTF_8));
         }
 
         return builder.build(true).toUri();

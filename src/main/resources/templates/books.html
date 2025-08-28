@@ -21,18 +21,57 @@
             height: 150px;
             object-fit: cover;
         }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .pager {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
 <h1>주간 인기 대출 도서</h1>
 
+<!-- 검색 폼 -->
+<form class="toolbar" th:action="@{/books}" method="get">
+    <input type="hidden" name="pageNo" value="1"/>
+    <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
+
+    <input type="text" name="title" placeholder="제목" th:value="${title}">
+    <input type="text" name="author" placeholder="저자" th:value="${author}">
+    <button type="submit">검색</button>
+    <a th:href="@{/books(pageNo=1, numOfRows=${numOfRows})}">검색 초기화</a>
+</form>
+
+<!-- 그리드 -->
 <div class="grid">
     <div class="card" th:each="b : ${books}">
-        <img th:src="${b.image}" alt="cover"/>
+        <img th:src="${#strings.isEmpty(b.image) ? '/img/noimg.png' : b.image}" alt="cover"/>
         <div><b th:text="${b.title}">제목</b></div>
         <div th:text="${b.author}">저자</div>
         <div style="font-size:12px;color:gray" th:text="${b.libName}">도서관</div>
     </div>
+</div>
+
+<!-- 페이징 -->
+<div class="pager">
+    <a th:if="${hasPrev}"
+       th:href="@{/books(pageNo=${prevPage}, numOfRows=${numOfRows}, title=${title}, author=${author})}">
+        ◀ 이전
+    </a>
+    <span th:text="${pageNo}">1</span>
+    <a th:if="${hasNext}"
+       th:href="@{/books(pageNo=${nextPage}, numOfRows=${numOfRows}, title=${title}, author=${author})}">
+        다음 ▶
+    </a>
+    <span th:text="'총 ' + ${totalCount} + '권'">총 0권</span>
 </div>
 
 </body>
