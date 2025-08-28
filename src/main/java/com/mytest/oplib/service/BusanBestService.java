@@ -6,10 +6,12 @@ import com.mytest.oplib.dto.BookBestView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -20,27 +22,38 @@ public class BusanBestService {
     private final RestClient restClient;
     private final BusanBestProps props;
 
+    public record BookBestPage(List<BookBestView> items, int pageNo, int numOfRows, int totalCount) {}
+
     /**
      * 외부 API 최종 URI 조립
      * - 서비스키가 "Encoding 키"면 .build(true)
      * - decoding 키를 쓸 거면, .build().encode()로 바꿔야 함
      */
-    private URI buildUri(int pageNo, int numOfRows) {
-        return UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
-                .queryParam("serviceKey", props.getServiceKey().trim())
+    private URI buildUri(int pageNo, int numOfRows, String title, String author) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
+                .queryParam("serviceKey", props.getServiceKey())
                 .queryParam("pageNo", pageNo)
                 .queryParam("numOfRows", numOfRows)
-                .queryParam("resultType", "json")
-                .build(true)
-                .toUri();
+                .queryParam("resultType", "json");
+
+        // null/빈문자열/공백 문자열을 -> 값 없음 처리
+        if (StringUtils.hasText(title)) {
+            builder.queryParam("title", title.trim());
+        }
+
+        if (StringUtils.hasText(author)) {
+            builder.queryParam("author", author.trim());
+        }
+
+        return builder.build(true).toUri();
     }
 
     /**
      * 1) 원문 구조로 받기 (디버그/검증용 또는 내부 가공용)
      *    - resultCode 검사 포함
      */
-    public BookBestResponse fetch(int pageNo, int numOfRows) {
-        URI uri = buildUri(pageNo, numOfRows);
+    public BookBestResponse fetch(int pageNo, int numOfRows, String title, String author) {
+        URI uri = buildUri(pageNo, numOfRows, title, author);
         log.debug("Busan API GET: {}", uri);        // 키가 URL에 노출됨으로 운영로그에 남기지 않기
 
         // 원래 try-catch나 전역 예외 처리함
@@ -66,26 +79,27 @@ public class BusanBestService {
     /**
      * 2) 프런트가 쓰기 쉬운 요약 리스트
      */
-    public List<BookBestView> fetchSimple(int pageNo, int numOfRows) {
-        BookBestResponse res = fetch(pageNo, numOfRows);
-        List<BookBestResponse.Item> items = res.response().body().items().item();
-        return items.stream()
-                .map(it -> new BookBestView(
-                        it.rank(),
-                        it.title(),
-                        it.author(),
-                        it.lib_name(),
-                        it.image()
-                ))
-                .toList();
+    public BookBestPage fetchSimple(int pageNo, int numOfRows, String title, String author) {
+        BookBestResponse res = fetch(pageNo, numOfRows, title, author);
+
+        List<BookBestResponse.Item> src = res.response().body().items().item();
+        List<BookBestView> items = new ArrayList<>(src.size());
+
+        for (BookBestResponse.Item it : src) {
+            items.add(new BookBestView(it.rank(), it.title(), it.author(), it.lib_name(), it.image()));
+        }
+
+        int totalCount = Integer.parseInt(res.response().body().totalCount());
+
+        return new BookBestPage(items, pageNo, numOfRows, totalCount);
     }
 
     /**
      * (선택) 원문 JSON 문자열 그대로 반환하고 싶을 때
      *  - 초기 점검용 엔드포인트에서 편함
      */
-    public String fetchRawJson(int pageNo, int numOfRows) {
-        URI uri = buildUri(pageNo, numOfRows);
+    public String fetchRawJson(int pageNo, int numOfRows, String title, String author) {
+        URI uri = buildUri(pageNo, numOfRows, title, author);
         return restClient.get().uri(uri).retrieve().body(String.class);
     }
 }
