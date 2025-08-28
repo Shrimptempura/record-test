@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주간 인기 대출 도서</title>
+    <style>
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .card img {
+            width: 100px;
+            height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+<h1>주간 인기 대출 도서</h1>
+
+<div class="grid">
+    <div class="card" th:each="b : ${books}">
+        <img th:src="${b.image}" alt="cover"/>
+        <div><b th:text="${b.title}">제목</b></div>
+        <div th:text="${b.author}">저자</div>
+        <div style="font-size:12px;color:gray" th:text="${b.libName}">도서관</div>
+    </div>
+</div>
+
+</body>
+</html>
