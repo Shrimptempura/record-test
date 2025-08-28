@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공공도서관 열람실 실시간</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #f6f6f6;
+        }
+
+        .toolbar {
+            margin: 12px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .pager {
+            margin: 12px 0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<h1>공공도서관 열람실 실시간</h1>
+
+<form class="toolbar" th:action="@{/seats}" method="get">
+    <input type="hidden" name="pageNo" value="1"/>
+    <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
+
+    <input type="text" name="pblibId" placeholder="도서관ID" th:value="${pblibId}">
+    <input type="text" name="rdrmId" placeholder="열람실ID" th:value="${rdrmId}">
+    <button type="submit">검색</button>
+    <a th:href="@{/seats(pageNo=1, numOfRows=${numOfRows})}">초기화</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>도서관</th>
+        <th>열람실</th>
+        <th>총좌석</th>
+        <th>사용중</th>
+        <th>예약</th>
+        <th>잔여</th>
+        <th>업데이트</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="it : ${items}">
+        <td th:text="${it.libraryName}">도서관</td>
+        <td th:text="${it.roomName}">열람실</td>
+        <td th:text="${it.totalSeats}">0</td>
+        <td th:text="${it.usedSeats}">0</td>
+        <td th:text="${it.reservedSeats}">0</td>
+        <td th:text="${it.remainSeats}">0</td>
+        <td th:text="${it.updatedAt}">2025-08-29 00:00</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="pager">
+    <a th:if="${hasPrev}"
+       th:href="@{/seats(pageNo=${prevPage}, numOfRows=${numOfRows}, pblibId=${pblibId}, rdrmId=${rdrmId})}">◀ 이전</a>
+    <span th:text="${pageNo}">1</span>
+    <a th:if="${hasNext}"
+       th:href="@{/seats(pageNo=${nextPage}, numOfRows=${numOfRows}, pblibId=${pblibId}, rdrmId=${rdrmId})}">다음 ▶</a>
+    <span th:text="'총 ' + ${totalCount} + '건'">총 0건</span>
+</div>
+
+</body>
+</html>

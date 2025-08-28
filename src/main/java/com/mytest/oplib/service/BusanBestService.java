@@ -33,6 +33,7 @@ public class BusanBestService {
      */
     private URI buildUri(int pageNo, int numOfRows, String title, String author) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
+                .path("/getBookLoanBest")
                 .queryParam("serviceKey", props.getServiceKey().trim())
                 .queryParam("pageNo", pageNo)
                 .queryParam("numOfRows", numOfRows)
