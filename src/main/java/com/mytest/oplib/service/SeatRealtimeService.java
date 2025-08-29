@@ -17,6 +17,8 @@ import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +30,9 @@ public class SeatRealtimeService {
 
     private final RestClient restClient;
     private final LibSeatProps props;
+
+    private static final DateTimeFormatter RAW_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final DateTimeFormatter HUMAN_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH시 mm분 ss초");
 
     /** 외부 API 최종 URI 구성 (Encoding 키 사용) */
     private URI buildSeatUri(int pageNo, int numOfRows, String libraryId, String readingRoomId) {
@@ -75,8 +80,17 @@ public class SeatRealtimeService {
         List<SeatRealtimeResponse.Item> items =
                 (body != null && body.items() != null) ? body.items() : Collections.emptyList();
 
+
         List<SeatRealtimeView> views = new ArrayList<>(items.size());
         for (SeatRealtimeResponse.Item it : items) {
+            String humanReadable;
+            try {
+                LocalDateTime dt = LocalDateTime.parse(nvl(it.totDt()), RAW_FMT);
+                humanReadable = dt.format(HUMAN_FMT);
+            } catch (Exception e) {
+                humanReadable = nvl(it.totDt());
+            }
+
             views.add(new SeatRealtimeView(
                     nvl(it.pblibNm()),
                     nvl(it.rdrmNm()),
@@ -84,7 +98,8 @@ public class SeatRealtimeService {
                     toInt(it.useSeatCnt()),
                     toInt(it.rsvtSeatCnt()),
                     toInt(it.rmndSeatCnt()),
-                    nvl(it.totDt())
+                    humanReadable,
+                    toInt(it.nowVstrCnt())
             ));
         }
 

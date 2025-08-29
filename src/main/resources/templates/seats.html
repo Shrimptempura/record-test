@@ -51,6 +51,7 @@
     <tr>
         <th>도서관</th>
         <th>열람실</th>
+        <th>방문자</th>
         <th>총좌석</th>
         <th>사용중</th>
         <th>예약</th>
@@ -62,6 +63,7 @@
     <tr th:each="it : ${items}">
         <td th:text="${it.libraryName}">도서관</td>
         <td th:text="${it.roomName}">열람실</td>
+        <td th:text="${it.nowVisitorCount()}">0</td>
         <td th:text="${it.totalSeats}">0</td>
         <td th:text="${it.usedSeats}">0</td>
         <td th:text="${it.reservedSeats}">0</td>

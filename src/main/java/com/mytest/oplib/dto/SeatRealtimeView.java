@@ -9,6 +9,7 @@ public record SeatRealtimeView(
         int usedSeats,
         int reservedSeats,
         int remainSeats,
-        String updatedAt
+        String updatedAt,
+        int nowVisitorCount
 ) {}
 
