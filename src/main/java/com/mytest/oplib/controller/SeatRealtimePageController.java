@@ -18,7 +18,7 @@ public class SeatRealtimePageController {
     public String view(
             @RequestParam(defaultValue = "1")  int pageNo,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "20") int numOfRows,
+            @RequestParam(defaultValue = "500") int numOfRows,
             @RequestParam(required = false) String libName,
             @RequestParam(required = false) String region,
             Model model
