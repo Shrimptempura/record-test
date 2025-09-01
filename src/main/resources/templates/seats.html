@@ -23,6 +23,7 @@
             margin: 12px 0;
             display: flex;
             gap: 8px;
+            align-items: center;
         }
 
         .pager {
@@ -31,18 +32,37 @@
             gap: 12px;
             align-items: center;
         }
+
+        .spacer {
+            flex: 1;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
     </style>
 </head>
 <body>
 <h1>공공도서관 열람실 실시간</h1>
 
 <form class="toolbar" th:action="@{/seats}" method="get">
+    <!-- 항상 1페이지부터 -->
     <input type="hidden" name="pageNo" value="1"/>
+    <!-- 한 번에 가져올 원본 행 수(서버 호출 rows) -->
     <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
 
-    <input type="text" name="pblibId" placeholder="도서관ID" th:value="${pblibId}">
-    <input type="text" name="rdrmId" placeholder="열람실ID" th:value="${rdrmId}">
+    <input type="text" name="libName" placeholder="도서관명 (예: 중앙도서관)" th:value="${libName}">
+    <input type="text" name="region" placeholder="지자체명 (예: 수원시)" th:value="${region}">
+    <label>
+        표시개수
+        <input type="number" name="limit" min="1" th:value="${limit}">
+    </label>
+
     <button type="submit">검색</button>
+
+    <span class="spacer"></span>
+
+    <!-- 초기화: 검색 파라미터를 비움 -->
     <a th:href="@{/seats(pageNo=1, numOfRows=${numOfRows})}">초기화</a>
 </form>
 
@@ -50,6 +70,7 @@
     <thead>
     <tr>
         <th>도서관</th>
+        <th>지자체</th>
         <th>열람실</th>
         <th>방문자</th>
         <th>총좌석</th>
@@ -62,23 +83,39 @@
     <tbody>
     <tr th:each="it : ${items}">
         <td th:text="${it.libraryName}">도서관</td>
+        <td th:text="${it.regionName}">지자체</td>
         <td th:text="${it.roomName}">열람실</td>
-        <td th:text="${it.nowVisitorCount()}">0</td>
+        <td th:text="${it.nowVisitorCount}">0</td>
         <td th:text="${it.totalSeats}">0</td>
         <td th:text="${it.usedSeats}">0</td>
         <td th:text="${it.reservedSeats}">0</td>
         <td th:text="${it.remainSeats}">0</td>
-        <td th:text="${it.updatedAt}">2025-08-29 00:00</td>
+        <td th:text="${it.updatedAt}">2025-09-01 00:00:00</td>
     </tr>
     </tbody>
 </table>
 
 <div class="pager">
     <a th:if="${hasPrev}"
-       th:href="@{/seats(pageNo=${prevPage}, numOfRows=${numOfRows}, pblibId=${pblibId}, rdrmId=${rdrmId})}">◀ 이전</a>
+       th:href="@{/seats(
+        pageNo=${prevPage},
+        numOfRows=${numOfRows},
+        libName=${libName},
+        region=${region},
+        limit=${limit}
+     )}">◀ 이전</a>
+
     <span th:text="${pageNo}">1</span>
+
     <a th:if="${hasNext}"
-       th:href="@{/seats(pageNo=${nextPage}, numOfRows=${numOfRows}, pblibId=${pblibId}, rdrmId=${rdrmId})}">다음 ▶</a>
+       th:href="@{/seats(
+        pageNo=${nextPage},
+        numOfRows=${numOfRows},
+        libName=${libName},
+        region=${region},
+        limit=${limit}
+     )}">다음 ▶</a>
+
     <span th:text="'총 ' + ${totalCount} + '건'">총 0건</span>
 </div>
 

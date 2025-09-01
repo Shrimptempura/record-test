@@ -9,14 +9,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,11 +30,9 @@ public class SeatRealtimeService {
 
     private static final DateTimeFormatter RAW_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter HUMAN_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH시 mm분 ss초");
-
-    /**
-     * 외부 API 최종 URI 구성 (Encoding 키 사용)
-     */
-    private URI buildSeatUri(int pageNo, int numOfRows, String libraryId, String readingRoomId) {
+    
+    // URI 생성 + encoding키 + 서버ID 필터 아님(required 파라매터에 없는 필드사용 예정)
+    private URI buildSeatUri(int pageNo, int numOfRows) {
         UriComponentsBuilder b = UriComponentsBuilder
                 .fromHttpUrl(props.getBaseUrl()) // ex) https://apis.data.go.kr/B551982/plr/rlt_rdrm_info
                 .queryParam("serviceKey", props.getServiceKey().trim())
@@ -45,27 +40,14 @@ public class SeatRealtimeService {
                 .queryParam("pageNo", pageNo)
                 .queryParam("numOfRows", numOfRows);
 
-        // 한글/특수문자 파라미터는 개별 인코딩
-        if (StringUtils.hasText(libraryId)) {
-            b.queryParam("pblibId", UriUtils.encodeQueryParam(libraryId.trim(), StandardCharsets.UTF_8));
-        }
-        if (StringUtils.hasText(readingRoomId)) {
-            b.queryParam("rdrmId", UriUtils.encodeQueryParam(readingRoomId.trim(), StandardCharsets.UTF_8));
-        }
-
         URI uri = b.build(true).toUri(); // 전체를 '이미 인코딩됨'으로 취급(키가 Encoding)
-        if (log.isDebugEnabled()) {
-            String masked = uri.toASCIIString().replace(props.getServiceKey(), "***");
-            log.debug("Seat API URI = {}", masked);
-        }
+        
         return uri;
     }
 
-    /**
-     * 원문 JSON 구조 그대로 반환(맛보기/검증 용)
-     */
-    public SeatRealtimeResponse getSeatRealtimeRaw(int pageNo, int numOfRows, String libraryId, String readingRoomId) {
-        URI uri = buildSeatUri(pageNo, numOfRows, libraryId, readingRoomId);
+    // HTTP 호출 + 역직렬화이후 레코드(dto)로 받기
+    public SeatRealtimeResponse getSeatRealtimeRaw(int pageNo, int numOfRows) {
+        URI uri = buildSeatUri(pageNo, numOfRows);
 
         SeatRealtimeResponse responseDto = restClient.get()
                 .uri(uri)
@@ -76,19 +58,32 @@ public class SeatRealtimeService {
         return responseDto;
     }
 
-    /**
-     * 프런트가 쓰기 좋은 요약 페이지
-     */
-    public SeatRealtimePage getSeatRealtimePage(int pageNo, int numOfRows, String libraryId, String readingRoomId) {
-        SeatRealtimeResponse dto = getSeatRealtimeRaw(pageNo, numOfRows, libraryId, readingRoomId);
+    // 프런트가 쓰기 쉬운 뷰
+    // body.items를 가져와 필터/검증/뷰 dto로 매핑
+    public SeatRealtimePage getSeatRealtimePage(int pageNo, int numOfRows, String libName, String region, int limit) {
+        SeatRealtimeResponse dto = getSeatRealtimeRaw(pageNo, numOfRows);
 
-        SeatRealtimeResponse.Body body = dto.body();
+        SeatRealtimeResponse.Body body = (dto != null) ? dto.body() : null;
         List<SeatRealtimeResponse.Item> items =
                 (body != null && body.items() != null) ? body.items() : Collections.emptyList();
 
+        final String kName = safeLower(libName);
+        final String kRegion = safeLower(region);
 
+        // 클라이언트 필터(부분일치 + 대소문자 무시)
         List<SeatRealtimeView> views = new ArrayList<>(items.size());
         for (SeatRealtimeResponse.Item it : items) {
+            String nm = safeLower(it.pblibNm());
+            String rg = safeLower(it.lclgvNm());
+
+            boolean nameMatch = kName.isEmpty() || nm.contains(kName);
+            boolean regionMatch = kRegion.isEmpty() || rg.contains(kRegion);
+
+            if (!nameMatch || !regionMatch) {
+                continue;
+            }
+
+            // view 매핑
             String humanReadable;
             try {
                 LocalDateTime dt = LocalDateTime.parse(nvl(it.totDt()), RAW_FMT);
@@ -99,6 +94,7 @@ public class SeatRealtimeService {
 
             views.add(new SeatRealtimeView(
                     nvl(it.pblibNm()),
+                    nvl(it.lclgvNm()),
                     nvl(it.rdrmNm()),
                     toInt(it.tseatCnt()),
                     toInt(it.useSeatCnt()),
@@ -107,14 +103,13 @@ public class SeatRealtimeService {
                     humanReadable,
                     toInt(it.nowVstrCnt())
             ));
-        }
 
-        int total = 0;
-        try {
-            total = (body != null) ? Integer.parseInt(nvl(body.totalCount(), "0")) : 0;
-        } catch (Exception ignore) {
+            if (limit > 0 && views.size() >= limit) {
+                break;
+            }
         }
-
+        
+        int total = 0;      // 필터된 결과 수
         return new SeatRealtimePage(views, pageNo, numOfRows, total);
     }
 
@@ -147,5 +142,9 @@ public class SeatRealtimeService {
 
     private static String nvl(String s, String def) {
         return (s == null || s.isBlank()) ? def : s;
+    }
+
+    private static String safeLower(String s) {
+        return (s == null) ? "" : s.toLowerCase();
     }
 }

@@ -20,16 +20,17 @@ public class SeatRealtimeApiController {
             @RequestParam(required = false, name = "pblibId") String libraryId,
             @RequestParam(required = false, name = "rdrmId")  String readingRoomId
     ) {
-        return seatService.getSeatRealtimeRaw(pageNo, numOfRows, libraryId, readingRoomId);
+        return seatService.getSeatRealtimeRaw(pageNo, numOfRows);
     }
 
     @GetMapping("/page")
     public SeatRealtimePage getPage(
             @RequestParam(defaultValue = "1")  int pageNo,
             @RequestParam(defaultValue = "20") int numOfRows,
-            @RequestParam(required = false, name = "pblibId") String libraryId,
-            @RequestParam(required = false, name = "rdrmId")  String readingRoomId
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String libName,
+            @RequestParam(required = false)  String region
     ) {
-        return seatService.getSeatRealtimePage(pageNo, numOfRows, libraryId, readingRoomId);
+        return seatService.getSeatRealtimePage(pageNo, numOfRows, libName, region, limit);
     }
 }

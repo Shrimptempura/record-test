@@ -9,8 +9,19 @@ public class LibSeatProps {
     private String baseUrl;
     private String serviceKey;
 
-    public String getBaseUrl() { return baseUrl; }
-    public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
-    public String getServiceKey() { return serviceKey; }
-    public void setServiceKey(String serviceKey) { this.serviceKey = serviceKey; }
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    public String getServiceKey() {
+        return serviceKey;
+    }
+
+    public void setServiceKey(String serviceKey) {
+        this.serviceKey = serviceKey;
+    }
 }
