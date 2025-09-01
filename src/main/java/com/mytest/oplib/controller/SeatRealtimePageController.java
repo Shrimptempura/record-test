@@ -23,25 +23,32 @@ public class SeatRealtimePageController {
             @RequestParam(required = false) String region,
             Model model
     ) {
-        // 현재 서비스는 한페이지 호출 -> 클라이언트 필터 -> 상위 limit 반환
-        SeatRealtimePage page = seatService.getSeatRealtimePage(pageNo, numOfRows, libName, region, limit);
+        int safePageNo = Math.max(1, pageNo);
 
+        // 현재 서비스는 한페이지 호출 -> 클라이언트 필터 -> 상위 limit 반환
+        SeatRealtimePage page = seatService.getSeatRealtimePage(safePageNo, numOfRows, libName, region, limit);
+
+        // 페이지 계산
         boolean hasPrev = page.pageNo() > 1;
-        boolean hasNext = false;
+        boolean hasNext = (long) page.pageNo() * page.numOfRows() < page.totalCount();
+        int prevPage = hasPrev ? page.pageNo() - 1 : page.pageNo();
+        int nextPage = hasNext ? page.pageNo() + 1 : page.pageNo();
 
         model.addAttribute("items", page.items());
         model.addAttribute("pageNo", page.pageNo());
-        model.addAttribute("numOfRows", page.numOfRows());
-        model.addAttribute("totalCount", page.totalCount());        // 현재는 필터 후 개수
+        model.addAttribute("numOfRows", page.numOfRows());          // = limit
+        model.addAttribute("totalCount", page.totalCount());        // 필터된 전체 건수
         model.addAttribute("hasPrev", hasPrev);
         model.addAttribute("hasNext", hasNext);
-        model.addAttribute("prevPage", page.pageNo() - 1);
-        model.addAttribute("nextPage", page.pageNo() + 1);
+        model.addAttribute("prevPage", prevPage);
+        model.addAttribute("nextPage", nextPage);
 
         // 검색 파라매터
         model.addAttribute("libName", libName);
         model.addAttribute("region", region);
         model.addAttribute("limit", limit);
+
+        model.addAttribute("rawNumOfRows", numOfRows);
 
         return "seats"; // templates/seats.html
     }

@@ -48,8 +48,8 @@
 <form class="toolbar" th:action="@{/seats}" method="get">
     <!-- 항상 1페이지부터 -->
     <input type="hidden" name="pageNo" value="1"/>
-    <!-- 한 번에 가져올 원본 행 수(서버 호출 rows) -->
-    <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
+    <!-- 업스트림(API) 한 페이지 크기 유지 -->
+    <input type="hidden" name="numOfRows" th:value="${rawNumOfRows}"/>
 
     <input type="text" name="libName" placeholder="도서관명 (예: 중앙도서관)" th:value="${libName}">
     <input type="text" name="region" placeholder="지자체명 (예: 수원시)" th:value="${region}">
@@ -62,8 +62,8 @@
 
     <span class="spacer"></span>
 
-    <!-- 초기화: 검색 파라미터를 비움 -->
-    <a th:href="@{/seats(pageNo=1, numOfRows=${numOfRows})}">초기화</a>
+    <!-- 초기화: 검색 파라미터를 비움 (업스트림 rows 유지) -->
+    <a th:href="@{/seats(pageNo=1, numOfRows=${rawNumOfRows})}">초기화</a>
 </form>
 
 <table>
@@ -99,7 +99,7 @@
     <a th:if="${hasPrev}"
        th:href="@{/seats(
         pageNo=${prevPage},
-        numOfRows=${numOfRows},
+        numOfRows=${rawNumOfRows},
         libName=${libName},
         region=${region},
         limit=${limit}
@@ -110,7 +110,7 @@
     <a th:if="${hasNext}"
        th:href="@{/seats(
         pageNo=${nextPage},
-        numOfRows=${numOfRows},
+        numOfRows=${rawNumOfRows},
         libName=${libName},
         region=${region},
         limit=${limit}
