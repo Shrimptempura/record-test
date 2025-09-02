@@ -1,13 +1,17 @@
 package com.mytest.oplib.config;
 
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConfigurationProperties(prefix = "lib.seat")
 public class LibSeatProps {
+
+    @NotBlank
     private String baseUrl;
-    private String serviceKey;
+
+    @NotBlank private String serviceKey;
 
     public String getBaseUrl() {
         return baseUrl;
