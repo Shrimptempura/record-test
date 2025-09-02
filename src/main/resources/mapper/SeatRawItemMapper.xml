@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mytest.oplib.dao.SeatRawItemMapper">
+
+    <insert id="upsertRaw" parameterType="com.mytest.oplib.dto.SeatRawUpsertCmd">
+        INSERT INTO seat_raw_item (
+            source,
+            pblib_id,
+            rdrm_id,
+            tot_dt,
+            payload,
+            fetched_at)
+        VALUES (
+            #{source},
+            #{pblibId},
+            #{rdrmId},
+            #{totDt},
+            #{payloadJson},
+            NOW())
+        ON DUPLICATE KEY UPDATE
+            payload = VALUES(payload),
+            fetched_at = VALUES(fetched_at)
+    </insert>
+
+</mapper>
