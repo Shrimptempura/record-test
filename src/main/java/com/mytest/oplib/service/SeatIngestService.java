@@ -21,7 +21,7 @@ public class SeatIngestService {
     private final SeatRawItemMapper rawMapper;
 
     // Json <-> Java 객체 변환
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public int ingest(String pblibId, String rdrmId) {
@@ -38,7 +38,7 @@ public class SeatIngestService {
         }
 
         // resp.body가 널이면 isEmpty???
-        if (resp.body() == null || resp.body().items() == null || resp.body().items().isEmpty()) {
+        if (resp.body() == null || resp.body().items() == null) {
             log.info("SeatIngestService - 수집 항목 없음 - pblibId: {}, rdrmId: {}", pblibId, rdrmId);
             return 0;
         }
@@ -57,6 +57,7 @@ public class SeatIngestService {
                     totDt14,
                     rawJson
             );
+            totalAffected += rawMapper.upsertRaw(cmd);
         }
 
         return totalAffected;

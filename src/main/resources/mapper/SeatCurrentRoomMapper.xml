@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mytest.oplib.dao.SeatCurrentRoomMapper">
+
+    <resultMap id="SeatSnapshotViewMap" type="com.mytest.oplib.dto.SeatSnapshotView">
+        <constructor>
+            <arg column="pblib_id" javaType="java.lang.String" />
+            <arg column="rdrm_id" javaType="java.lang.String" />
+            <arg column="pblib_nm" javaType="java.lang.String" />
+            <arg column="lclgv_nm" javaType="java.lang.String" />
+            <arg column="rdrm_nm" javaType="java.lang.String" />
+            <arg column="now_vstr_cnt" javaType="java.lang.Integer" />
+            <arg column="tseat_cnt" javaType="java.lang.Integer" />
+            <arg column="use_seat_cnt" javaType="java.lang.Integer" />
+            <arg column="rsvt_seat_cnt" javaType="java.lang.Integer" />
+            <arg column="rmnd_seat_cnt" javaType="java.lang.Integer" />
+            <arg column="updated_at" javaType="java.time.LocalDateTime" />
+        </constructor>
+    </resultMap>
+
+    <!-- pk 조회(pblib_id, rdrm_id) -->
+    <select id="findByKey" resultType="com.mytest.oplib.dto.SeatSnapshotView">
+        SELECT
+            pblib_id AS pblibId,
+            rdrm_id AS rdrmId,
+            pblib_nm AS pblibNm,
+            lclgv_nm AS lclgvNm,
+            rdrm_nm AS rdrmNm,
+            now_vstr_cnt AS nowVstrCnt,
+            tseat_cnt AS tseatCnt,
+            use_seat_cnt AS useSeatCnt,
+            rsvt_seat_cnt AS rsvtSeatCnt,
+            rmnd_seat_cnt AS rmndSeatCnt,
+            updated_at AS updatedAt
+        FROM seat_current_room
+        WHERE pblib_id = #{key.pblibId}
+            AND rdrm_id = #{key.rdrmId}
+    </select>
+
+    <!-- 검색 + 페이징 -->
+    <select id="search" resultType="com.mytest.oplib.dto.SeatSnapshotView">
+
+    </select>
+</mapper>
