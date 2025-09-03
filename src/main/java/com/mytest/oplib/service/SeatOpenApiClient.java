@@ -17,7 +17,7 @@ public class SeatOpenApiClient {
     private final RestClient restClient;
     private final LibSeatProps props;
 
-    public String fetch(String pblibId, String rdrmId) {
+    public String fetch(String pblibId, String rdrmId, Integer pageNo, Integer numOfRows) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
                 .queryParam("serviceKey", props.getServiceKey().trim())
                 .queryParam("Type", "json");
@@ -30,12 +30,19 @@ public class SeatOpenApiClient {
             builder.queryParam("rdrmId", rdrmId.trim());
         }
 
+        if (pageNo != null && pageNo > 0) {
+            builder.queryParam("pageNo", pageNo);
+        }
+        if (numOfRows != null && numOfRows > 0) {
+            builder.queryParam("numOfRows", numOfRows);
+        }
+
         URI uri = builder.build(true).toUri();
 
         return restClient.get()
                 .uri(uri)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
-                .body(String.class);
+                .body(String.class);    // 원본 JSON 문자열로 반환
     }
 }

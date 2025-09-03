@@ -39,7 +39,7 @@
             STR_TO_DATE(r.tot_dt, '%Y%m%d%H%i%s') AS updatedAt,
 
             /* 검색용 정규화 칼럼(공백제거 + 소문자) */
-            LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].rdrmNm')), ' ', '')) AS name_norm,
+            LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].pblibNm')), ' ', '')) AS name_norm,
             LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].lclgvNm')), ' ', '')) AS region_norm
         FROM seat_raw_item r
         JOIN (
