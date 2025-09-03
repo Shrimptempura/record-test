@@ -4,6 +4,7 @@ import com.mytest.oplib.dto.CurrentRoomKey;
 import com.mytest.oplib.dto.CurrentRoomSearchCond;
 import com.mytest.oplib.dto.SeatSnapshotView;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -14,8 +15,10 @@ import java.util.List;
 @Mapper
 public interface SeatCurrentRoomMapper {
 
-    SeatSnapshotView findByKey(CurrentRoomKey key);
+    int materializeLatestByKey(@Param("key") CurrentRoomKey key);
 
-    List<SeatSnapshotView> search(CurrentRoomSearchCond cond);
+    SeatSnapshotView findByKey(@Param("key") CurrentRoomKey key);
+
+    List<SeatSnapshotView> search(@Param("cond") CurrentRoomSearchCond cond);
 
 }
