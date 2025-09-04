@@ -24,23 +24,23 @@
 
             /* 원본 JSON에서 문자열 값 추출,
             JSON_EXTRACT -> JSON String("...") -> JSON_UNQUOTE으로 따옴표 제거 */
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].pblibNm')) AS pblib_nm,
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].lclgvNm')) AS lclgv_nm,
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].rdrmNm')) AS rdrm_nm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.pblibNm')) AS pblib_nm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')) AS lclgv_nm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.rdrmNm')) AS rdrm_nm,
 
-            /* 숫자칼럼을 문자->정수로 캐스팅 */
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].nowVstrCnt')) AS UNSIGNED) AS nowVstrCnt,
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].tseatCnt')) AS UNSIGNED) AS tseatCnt,
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].useSeatCnt')) AS UNSIGNED) AS useSeatCnt,
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].rsvtSeatCnt')) AS UNSIGNED) AS rsvtSeatCnt,
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].rmndSeatCnt')) AS UNSIGNED) AS rmndSeatCnt,
+            /* 숫자: 빈문자열("") → NULL 처리 후 캐스팅, NOT NULL이면 0으로 보강 */
+            COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.nowVstrCnt')), '') AS UNSIGNED), 0) AS nowVstrCnt,
+            COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.tseatCnt')),    '') AS UNSIGNED), 0) AS tseatCnt,
+            COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.useSeatCnt')),  '') AS UNSIGNED), 0) AS useSeatCnt,
+            COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.rsvtSeatCnt')), '') AS UNSIGNED), 0) AS rsvtSeatCnt,
+            COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.rmndSeatCnt')), '') AS UNSIGNED), 0) AS rmndSeatCnt,
 
             /* ymdhms 형식 문자열을 찾아서 DATETIME으로 변환 */
             STR_TO_DATE(r.tot_dt, '%Y%m%d%H%i%s') AS updatedAt,
 
             /* 검색용 정규화 칼럼(공백제거 + 소문자) */
-            LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].pblibNm')), ' ', '')) AS name_norm,
-            LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.body.item[0].lclgvNm')), ' ', '')) AS region_norm
+            COALESCE(LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.pblibNm')), ' ', '')), '') AS nameNorm,
+            COALESCE(LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')), ' ', '')), '') AS regionNorm
         FROM seat_raw_item r
         JOIN (
             SELECT pblib_id, rdrm_id, MAX(tot_dt) AS max_tot_dt
@@ -66,37 +66,20 @@
             region_norm = VALUES(region_norm);
     </insert>
 
-    <!-- findByKey -->
-    <resultMap id="SeatSnapshotViewMap" type="com.mytest.oplib.dto.SeatSnapshotView">
-        <constructor>
-            <arg column="pblib_id" javaType="java.lang.String" />
-            <arg column="rdrm_id" javaType="java.lang.String" />
-            <arg column="pblib_nm" javaType="java.lang.String" />
-            <arg column="lclgv_nm" javaType="java.lang.String" />
-            <arg column="rdrm_nm" javaType="java.lang.String" />
-            <arg column="now_vstr_cnt" javaType="java.lang.Integer" />
-            <arg column="tseat_cnt" javaType="java.lang.Integer" />
-            <arg column="use_seat_cnt" javaType="java.lang.Integer" />
-            <arg column="rsvt_seat_cnt" javaType="java.lang.Integer" />
-            <arg column="rmnd_seat_cnt" javaType="java.lang.Integer" />
-            <arg column="updated_at" javaType="java.time.LocalDateTime" />
-        </constructor>
-    </resultMap>
-
     <!-- pk 조회(pblib_id, rdrm_id) -->
-    <select id="findByKey" resultMap="SeatSnapshotViewMap">
+    <select id="findByKey" resultType="com.mytest.oplib.dto.SeatSnapshotView">
         SELECT
-            pblib_id,
-            rdrm_id,
-            pblib_nm,
-            lclgv_nm,
-            rdrm_nm,
-            now_vstr_cnt,
-            tseat_cnt,
-            use_seat_cnt,
-            rsvt_seat_cnt,
-            rmnd_seat_cnt,
-            updated_at
+            pblib_id AS pblibId,
+            rdrm_id AS rdrmId,
+            pblib_nm AS pblibNm,
+            lclgv_nm AS lclgvNm,
+            rdrm_nm AS rdrmNm,
+            now_vstr_cnt AS nowVstrCnt,
+            tseat_cnt AS tseatCnt,
+            use_seat_cnt AS useSeatCnt,
+            rsvt_seat_cnt AS rsvtSeatCnt,
+            rmnd_seat_cnt AS rmndSeatCnt,
+            updated_at AS updatedAt
         FROM seat_current_room
         WHERE pblib_id = #{key.pblibId}
             AND rdrm_id = #{key.rdrmId}
@@ -135,5 +118,19 @@
         </otherwise>
         </choose>
     </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*)
+        FROM seat_current_room
+        <where>
+            <if test="cond.name != null and cond.name != ''">
+                AND name_norm LIKE CONCAT('%', #{cond.name}, '%')
+            </if>
+            <if test="cond.region != null and cond.region != ''">
+                AND region_norm LIKE CONCAT('%', #{cond.region}, '%')
+            </if>
+        </where>
+    </select>
+
 
 </mapper>

@@ -10,12 +10,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// 최종 테스트 버전
 /**
- * Thymeleaf 기반 SSR 페이지 컨트롤러
- * - GET /seats : 목록 + 검색 + 페이징
- * 목록 페이징은 "다음 페이지가 있는지"만 판단(hasNext)한다.
- * totalCount가 필요하면 count 쿼리를 별도로 추가해야 함.
+ * GET /seats : (1) 데이터 없으면 자동 전량 수집 → (2) 검색+페이징 조회 → (3) 화면 표출
+ * - totalCount/totalPages/hasPrev/hasNext 제공
+ * - ingest/debug 엔드포인트 제거
  */
 @Controller
 @RequiredArgsConstructor
@@ -29,64 +27,56 @@ public class SeatPageController {
     public String list(@RequestParam(required = false) String name,
                        @RequestParam(required = false) String region,
                        @RequestParam(defaultValue = "1") Integer page,   // 1-base
-                       @RequestParam(defaultValue = "20") Integer size,   // page size
+                       @RequestParam(defaultValue = "20") Integer size,   // page size (UI에서 늘리고 싶으면 조절)
                        Model model) {
+        ingestService.ingestAllAuto(100, 5000);
 
-        // 서비스에서 limit/offset 가드 처리함 (size 상한 100)
-        List<SeatSnapshotView> items = queryService.search(name, region, page, size);
+        // 1) 총 건수(검색 반영)
+        int total = queryService.count(name, region);
+        int safeMax = 500;
 
-        boolean hasPrev = page > 1;
-        boolean hasNext = (items.size() == Math.min(size, 100)); // 더 있을 가능성 힌트
+        // 2) 페이징 보정
+        int safeSize = Math.max(1, Math.min(size, 500)); // 과도한 1페이지 폭은 제한(원하면 더 키워도 됨)
+        int totalPages = Math.max(1, (total + safeSize - 1) / safeSize);
+        int safePage = Math.min(Math.max(1, page), totalPages);
+
+        // 3) 목록 조회
+        List<SeatSnapshotView> items = queryService.search(name, region, safePage, safeSize);
+
+        // 4) 모델 구성 (총 페이지/이전다음/검색값 유지)
+        boolean hasPrev = safePage > 1;
+        boolean hasNext = safePage < totalPages;
 
         model.addAttribute("items", items);
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
+        model.addAttribute("page", safePage);
+        model.addAttribute("size", safeSize);
+        model.addAttribute("total", total);
+        model.addAttribute("totalPages", totalPages);
         model.addAttribute("hasPrev", hasPrev);
         model.addAttribute("hasNext", hasNext);
-        model.addAttribute("prevPage", hasPrev ? page - 1 : 1);
-        model.addAttribute("nextPage", hasNext ? page + 1 : page);
+        model.addAttribute("prevPage", hasPrev ? safePage - 1 : 1);
+        model.addAttribute("nextPage", hasNext ? safePage + 1 : safePage);
 
-        // 검색 파라미터 유지
         model.addAttribute("name", name);
         model.addAttribute("region", region);
 
-        return "seats"; // templates/seats.html
+        return "seats";
     }
 
-    // 브라우저에서 바로 수집 트리거할 수 있게 GET도 허용(연습/확인용)
-    @GetMapping("/ingest")
-    public String ingest(@RequestParam(required = false) String pblibId,
-                         @RequestParam(required = false) String rdrmId,
-                         @RequestParam(required = false) Integer pageNo,
-                         @RequestParam(required = false) Integer numOfRows) {
-        ingestService.ingestAndMaterialize(pblibId, rdrmId, pageNo, numOfRows); // null/null 허용
-        return "redirect:/seats";
-    }
-
-    // 예: /seats/ingest-all?pageFrom=1&pageTo=30&size=100
-    @GetMapping("/ingest-all")
-    public String ingestAll(@RequestParam(defaultValue="1") Integer pageFrom,
-                            @RequestParam(defaultValue="1") Integer pageTo,
-                            @RequestParam(defaultValue="100") Integer size) {
-        int total = 0;
-        for (int p = pageFrom; p <= pageTo; p++) {
-            total += ingestService.ingestAndMaterialize(null, null, p, size);
-        }
-        // 옵션: totalCount를 파싱해서 pageTo를 자동 계산하도록 개선 가능
-        return "redirect:/seats";
-    }
-
-
-    // 임시: 원문 응답 디버그(키 없이도 호출)
-    @GetMapping("/debug-fetch")
+    // SeatPageController.java
+    @GetMapping(value = "/debug-fetch", produces = "text/plain; charset=UTF-8")
     @ResponseBody
     public String debugFetch(@RequestParam(required = false) String pblibId,
                              @RequestParam(required = false) String rdrmId,
-                             @RequestParam(required = false) Integer pageNo,
-                             @RequestParam(required = false) Integer numOfRows) {
+                             @RequestParam(defaultValue = "1") Integer pageNo,
+                             @RequestParam(defaultValue = "100") Integer numOfRows) {
         String raw = ingestService.debugFetchRaw(pblibId, rdrmId, pageNo, numOfRows);
-        return "len=" + (raw == null ? 0 : raw.length())
-                + "\nfirst300=\n" + (raw == null ? "null" : raw.substring(0, Math.min(300, raw.length())));
+        if (raw == null) return "len=0\nfirst1000=\n";
+        int len = raw.length();
+        int head = Math.min(1000, len);
+        return "len=" + len + "\nfirst1000=\n" + raw.substring(0, head);
     }
+
 }
+
 

@@ -21,4 +21,7 @@ public interface SeatCurrentRoomMapper {
 
     List<SeatSnapshotView> search(@Param("cond") CurrentRoomSearchCond cond);
 
+    /** 검색 조건에 맞는 건수 */
+    int count(@Param("cond") CurrentRoomSearchCond cond);
+
 }

@@ -20,10 +20,22 @@ public class SeatQueryService {
     }
 
     public List<SeatSnapshotView> search(String name, String region, Integer page, Integer size) {
-        int limit = (size == null || size <= 0) ? 20 : Math.min(size, 100);
+        int safeMax = 500;
+        int limit = (size == null || size <= 0) ? 20 : Math.min(size, safeMax);
         int offset = (page == null || page <= 1) ? 0 : (page - 1) * limit;
 
         CurrentRoomSearchCond cond = new CurrentRoomSearchCond(name, region, limit, offset);
         return mapper.search(cond);
+    }
+
+    /** 전체 건수(검색 반영) */
+    public int count(String name, String region) {
+        CurrentRoomSearchCond cond = new CurrentRoomSearchCond(name, region, null, null);
+        return mapper.count(cond);
+    }
+
+    /** 전체 건수(검색 조건 없음) */
+    public int countAll() {
+        return mapper.count(new CurrentRoomSearchCond(null, null, null, null));
     }
 }

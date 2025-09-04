@@ -2,6 +2,7 @@ package com.mytest.oplib.service;
 
 import com.mytest.oplib.config.LibSeatProps;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -10,6 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 
+@Slf4j
 @Component      // 외부 api 어댑터 성격이라 component, (service도 가능)
 @RequiredArgsConstructor
 public class SeatOpenApiClient {
@@ -20,7 +22,7 @@ public class SeatOpenApiClient {
     public String fetch(String pblibId, String rdrmId, Integer pageNo, Integer numOfRows) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
                 .queryParam("serviceKey", props.getServiceKey().trim())
-                .queryParam("Type", "json");
+                .queryParam("type", "json");
 
         if (StringUtils.hasText(pblibId)) {
             builder.queryParam("pblibId", pblibId.trim());
@@ -39,6 +41,7 @@ public class SeatOpenApiClient {
 
         URI uri = builder.build(true).toUri();
 
+        log.info("[CLIENT] uri={}", uri);
         return restClient.get()
                 .uri(uri)
                 .accept(MediaType.APPLICATION_JSON)
