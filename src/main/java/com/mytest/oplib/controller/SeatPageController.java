@@ -26,13 +26,14 @@ public class SeatPageController {
     @GetMapping
     public String list(@RequestParam(required = false) String name,
                        @RequestParam(required = false) String region,
+                       @RequestParam(required = false) String stdgCd,
                        @RequestParam(defaultValue = "1") Integer page,   // 1-base
                        @RequestParam(defaultValue = "20") Integer size,   // page size (UI에서 늘리고 싶으면 조절)
                        Model model) {
         ingestService.ingestAllAuto(100, 5000);
 
         // 1) 총 건수(검색 반영)
-        int total = queryService.count(name, region);
+        int total = queryService.count(stdgCd, name, region);
         int safeMax = 500;
 
         // 2) 페이징 보정
@@ -41,7 +42,7 @@ public class SeatPageController {
         int safePage = Math.min(Math.max(1, page), totalPages);
 
         // 3) 목록 조회
-        List<SeatSnapshotView> items = queryService.search(name, region, safePage, safeSize);
+        List<SeatSnapshotView> items = queryService.search(stdgCd, name, region, safePage, safeSize);
 
         // 4) 모델 구성 (총 페이지/이전다음/검색값 유지)
         boolean hasPrev = safePage > 1;

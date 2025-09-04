@@ -8,6 +8,7 @@
     <insert id="upsertRaw" parameterType="com.mytest.oplib.dto.SeatRawUpsertCmd">
         INSERT INTO seat_raw_item (
             source,
+            stdg_cd,
             pblib_id,
             rdrm_id,
             tot_dt,
@@ -15,6 +16,7 @@
             fetched_at)
         VALUES (
             #{source},
+            #{stdgCd},
             #{pblibId},
             #{rdrmId},
             #{totDt},

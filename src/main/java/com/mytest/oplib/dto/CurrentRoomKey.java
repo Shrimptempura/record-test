@@ -1,4 +1,4 @@
 package com.mytest.oplib.dto;
 
-public record CurrentRoomKey(String pblibId, String rdrmId) {
+public record CurrentRoomKey(String stdgCd, String pblibId, String rdrmId) {
 }

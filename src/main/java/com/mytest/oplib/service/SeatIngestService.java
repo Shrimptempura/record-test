@@ -59,6 +59,9 @@ public class SeatIngestService {
             String keyRdrmId = StringUtils.hasText(item.rdrmId())
                     ? item.rdrmId()
                     : synthKey(item.rdrmNm());
+
+            String stdgCd = item.stdgCd();
+
             if (!StringUtils.hasText(keyPblibId) || !StringUtils.hasText(keyRdrmId)) {
                 log.warn("SeatIngestService - Skipped item with missing key - pblibId: {}, rdrmId: {}", keyPblibId, keyRdrmId);
                 continue;
@@ -77,6 +80,7 @@ public class SeatIngestService {
             // 원본 raw 업서트
             SeatRawUpsertCmd cmd = new SeatRawUpsertCmd(
                     "rlt_rdrm_info",
+                    stdgCd,
                     keyPblibId,
                     keyRdrmId,
                     totDt14,
@@ -85,7 +89,7 @@ public class SeatIngestService {
             rawMapper.upsertRaw(cmd);
 
             // 최신 스냅샷 materialize
-            totalAffected += currentMapper.materializeLatestByKey(new CurrentRoomKey(keyPblibId, keyRdrmId));
+            totalAffected += currentMapper.materializeLatestByKey(new CurrentRoomKey(stdgCd, keyPblibId, keyRdrmId));
         }
 
         log.info("SeatIngestService - 성공 - totalAffected: {}", totalAffected);
@@ -159,6 +163,8 @@ public class SeatIngestService {
                     ? item.rdrmId()
                     : synthKey(item.rdrmNm());                    // 열람실명 기반 대체키
 
+            String stdgCd = item.stdgCd();
+
             // 최소한 대체키조차 못 만들 정도로 정보가 없다면만 스킵
             if (!StringUtils.hasText(keyPblibId) && !StringUtils.hasText(keyRdrmId)) {
                 skippedNoMinimal++;
@@ -176,12 +182,12 @@ public class SeatIngestService {
             }
 
             // RAW는 무조건 보존 (대체키 포함)
-            rawMapper.upsertRaw(new SeatRawUpsertCmd("rlt_rdrm_info", keyPblibId, keyRdrmId, totDt14, itemJson));
+            rawMapper.upsertRaw(new SeatRawUpsertCmd("rlt_rdrm_info", stdgCd, keyPblibId, keyRdrmId, totDt14, itemJson));
             savedRaw++;
 
             // 스냅샷은 “진짜 키”가 있을 때만 반영
             if (StringUtils.hasText(item.pblibId()) && StringUtils.hasText(item.rdrmId())) {
-                matz += currentMapper.materializeLatestByKey(new CurrentRoomKey(item.pblibId(), item.rdrmId()));
+                matz += currentMapper.materializeLatestByKey(new CurrentRoomKey(item.stdgCd(), item.pblibId(), item.rdrmId()));
             }
         }
 

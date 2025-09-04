@@ -6,6 +6,7 @@
     <insert id="materializeLatestByKey">
         INSERT INTO seat_current_room (
             pblib_id,
+            stdg_cd,
             rdrm_id,
             pblib_nm,
             lclgv_nm,
@@ -19,6 +20,7 @@
             name_norm,
             region_norm)
         SELECT
+            r.stdg_cd,
             r.pblib_id,
             r.rdrm_id,
 
@@ -43,12 +45,14 @@
             COALESCE(LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')), ' ', '')), '') AS regionNorm
         FROM seat_raw_item r
         JOIN (
-            SELECT pblib_id, rdrm_id, MAX(tot_dt) AS max_tot_dt
+            SELECT stdg_cd, pblib_id, rdrm_id, MAX(tot_dt) AS max_tot_dt
             FROM seat_raw_item
-            WHERE pblib_id = #{key.pblibId}
+            WHERE stdg_cd = #{key.stdgCd}
+                AND pblib_id = #{key.pblibId}
                 AND rdrm_id = #{key.rdrmId}
             GROUP BY pblib_id, rdrm_id) t
-            ON t.pblib_id = r.pblib_id
+            ON t.stdg_cd = r.stdg_cd
+                AND t.pblib_id = r.pblib_id
                 AND t.rdrm_id = r.rdrm_id
                 AND t.max_tot_dt = r.tot_dt
         WHERE JSON_VALID(r.payload)
@@ -81,7 +85,8 @@
             rmnd_seat_cnt AS rmndSeatCnt,
             updated_at AS updatedAt
         FROM seat_current_room
-        WHERE pblib_id = #{key.pblibId}
+        WHERE stdg_cd = #{key.stdgCd}
+            AND pblib_id = #{key.pblibId}
             AND rdrm_id = #{key.rdrmId}
     </select>
 
@@ -101,6 +106,9 @@
             updated_at AS updatedAt
         FROM seat_current_room
         <where>
+            <if test="cond.stdgCd != null and cond.stdgCd != ''">
+                AND stdg_cd = #{cond.stdgCd}
+            </if>
             <if test="cond.name != null and cond.name != ''">
                 AND name_norm LIKE CONCAT('%', #{cond.name}, '%')
             </if>
@@ -123,6 +131,9 @@
         SELECT COUNT(*)
         FROM seat_current_room
         <where>
+            <if test="cond.stdgCd != null and cond.stdgCd != ''">
+                AND stdg_cd = #{cond.stdgCd}
+            </if>
             <if test="cond.name != null and cond.name != ''">
                 AND name_norm LIKE CONCAT('%', #{cond.name}, '%')
             </if>
