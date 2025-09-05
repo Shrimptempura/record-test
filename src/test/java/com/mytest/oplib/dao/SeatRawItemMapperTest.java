@@ -22,6 +22,7 @@ class SeatRawItemMapperTest {
     void upsertRaw_shouldInsertOrUpdate() {
         // 1) 더미 키/JSON (totDt는 14자리로)
         String source = "rlt_rdrm_info";
+        String stdgCd = "LIB001";
         String pblibId = "LIB001";
         String rdrmId = "ROOM01";
         String totDt = "20250901103000";
@@ -33,6 +34,7 @@ class SeatRawItemMapperTest {
                         "resultMsg": "OK" },
                     "body": {
                         "item": [{
+                        "stdgCd": "LIB001",
                         "pblibId": "LIB001",
                         "rdrmId": "ROOM01",
                         "nowVstrCnt": "12",
@@ -45,7 +47,7 @@ class SeatRawItemMapperTest {
 
         // 2) 커맨드 생성 후 업서트 호출
         SeatRawUpsertCmd cmd = new SeatRawUpsertCmd(
-                source, pblibId, rdrmId, totDt, payloadJson
+                source, stdgCd, pblibId, rdrmId, totDt, payloadJson
         );
 
         int affected = mapper.upsertRaw(cmd);

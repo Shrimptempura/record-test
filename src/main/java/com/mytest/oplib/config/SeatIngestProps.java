@@ -1,13 +1,13 @@
 package com.mytest.oplib.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
-@Component
+import java.util.List;
+
 @ConfigurationProperties(prefix = "seat.ingest")
-public class SeatIngestProps {
-    boolean enabled;
-    String cron;
-    int numOfRows;
-    List<String> targets;
-}
+public record SeatIngestProps(
+        boolean enabled,
+        String cron,
+        int numOfRows,
+        List<String> targets
+) { }
