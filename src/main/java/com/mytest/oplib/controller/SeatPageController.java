@@ -10,11 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * GET /seats : (1) 데이터 없으면 자동 전량 수집 → (2) 검색+페이징 조회 → (3) 화면 표출
- * - totalCount/totalPages/hasPrev/hasNext 제공
- * - ingest/debug 엔드포인트 제거
- */
+// 스케줄링 버전 0905
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/seats")
@@ -30,11 +26,8 @@ public class SeatPageController {
                        @RequestParam(defaultValue = "1") Integer page,   // 1-base
                        @RequestParam(defaultValue = "20") Integer size,   // page size (UI에서 늘리고 싶으면 조절)
                        Model model) {
-        ingestService.ingestAllAuto(100, 5000);
-
         // 1) 총 건수(검색 반영)
         int total = queryService.count(stdgCd, name, region);
-        int safeMax = 500;
 
         // 2) 페이징 보정
         int safeSize = Math.max(1, Math.min(size, 500)); // 과도한 1페이지 폭은 제한(원하면 더 키워도 됨)
@@ -60,6 +53,7 @@ public class SeatPageController {
 
         model.addAttribute("name", name);
         model.addAttribute("region", region);
+        model.addAttribute("stdgCd", stdgCd);
 
         return "seats";
     }

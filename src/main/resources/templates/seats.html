@@ -48,6 +48,7 @@
 <form class="toolbar" th:action="@{/seats}" method="get">
     <input type="text" name="name" placeholder="도서관명 (예: 중앙도서관)" th:value="${name}">
     <input type="text" name="region" placeholder="지자체명 (예: 수원시)" th:value="${region}">
+    <input type="hidden" name="stdgCd" th:value="${stdgCd}">
     <label>
         표시개수
         <input type="number" name="size" min="1" th:value="${size}">
@@ -89,11 +90,11 @@
 </table>
 
 <div class="pager">
-    <a th:if="${hasPrev}" th:href="@{/seats(page=${prevPage}, size=${size}, name=${name}, region=${region})}">◀ 이전</a>
+    <a th:if="${hasPrev}" th:href="@{/seats(page=${prevPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">◀ 이전</a>
     <span th:text="${page}">1</span>
     <span>/</span>
     <span th:text="${totalPages}">1</span>
-    <a th:if="${hasNext}" th:href="@{/seats(page=${nextPage}, size=${size}, name=${name}, region=${region})}">다음 ▶</a>
+    <a th:if="${hasNext}" th:href="@{/seats(page=${nextPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">다음 ▶</a>
     <span class="spacer"></span>
     <span th:text="|총 ${total}건|">총 0건</span>
 </div>
