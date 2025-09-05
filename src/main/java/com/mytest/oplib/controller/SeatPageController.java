@@ -64,19 +64,19 @@ public class SeatPageController {
         return "seats";
     }
 
-    // SeatPageController.java
-    @GetMapping(value = "/debug-fetch", produces = "text/plain; charset=UTF-8")
-    @ResponseBody
-    public String debugFetch(@RequestParam(required = false) String pblibId,
-                             @RequestParam(required = false) String rdrmId,
-                             @RequestParam(defaultValue = "1") Integer pageNo,
-                             @RequestParam(defaultValue = "100") Integer numOfRows) {
-        String raw = ingestService.debugFetchRaw(pblibId, rdrmId, pageNo, numOfRows);
-        if (raw == null) return "len=0\nfirst1000=\n";
-        int len = raw.length();
-        int head = Math.min(1000, len);
-        return "len=" + len + "\nfirst1000=\n" + raw.substring(0, head);
-    }
+//    // SeatPageController.java
+//    @GetMapping(value = "/debug-fetch", produces = "text/plain; charset=UTF-8")
+//    @ResponseBody
+//    public String debugFetch(@RequestParam(required = false) String pblibId,
+//                             @RequestParam(required = false) String rdrmId,
+//                             @RequestParam(defaultValue = "1") Integer pageNo,
+//                             @RequestParam(defaultValue = "100") Integer numOfRows) {
+//        String raw = ingestService.debugFetchRaw(pblibId, rdrmId, pageNo, numOfRows);
+//        if (raw == null) return "len=0\nfirst1000=\n";
+//        int len = raw.length();
+//        int head = Math.min(1000, len);
+//        return "len=" + len + "\nfirst1000=\n" + raw.substring(0, head);
+//    }
 
 }
 

@@ -33,9 +33,12 @@ public class SeatIngestScheduler {
             log.info("SeatIngestScheduler - 시작: targets={}, numOfRows={}", props.targets(), props.numOfRows());
 
             for (String target : props.targets()) {
-                // 포맷: pblibId:stdgCd:rdrmid (정리중)
-                String[] arr = target.split(":");
+                if (target == null || target.isBlank()) {
+                    continue;
+                }
 
+                // 포맷: pblibId:stdgCd:rdrmId (정리중)
+                String[] arr = target.split(":");
                 if (arr.length != 3) {
                     log.error("SeatIngestScheduler - 잘못된 타겟 포맷: {}", target);
                     continue;
@@ -43,15 +46,16 @@ public class SeatIngestScheduler {
 
                 String pblibId = arr[0];
                 String stdgCd = arr[1];
-                String rdrmid = arr[2];
+                String rdrmId = arr[2];
 
-                // 여기서 서비스 호출 (구현은 나중에)
-                service.ingestOneTarget(pblibId, stdgCd, rdrmid, props.numOfRows());
-                log.info("SeatIngestScheduler - 완료: pblibId: {}, stdgCd: {}, rdrmId: {}", pblibId, stdgCd, rdrmid);
+                try {
+                    service.ingestOneTarget(pblibId, stdgCd, rdrmId, props.numOfRows());
+                    log.info("SeatIngestScheduler - 완료: pblibId: {}, stdgCd: {}, rdrmId: {}", pblibId, stdgCd, rdrmId);
+                } catch (Exception e) {
+                    log.error("SeatIngestScheduler - 작업 중 오류 발생: pblibId: {}, stdgCd: {}, rdrmId: {}", pblibId, stdgCd, rdrmId, e);
+                }
             }
             log.info("SeatIngestScheduler - 전체 작업 완료");
-        } catch (Exception e) {
-            log.error("SeatIngestScheduler - 작업 중 오류 발생", e);
         } finally {
             lock.unlock();
         }

@@ -20,15 +20,15 @@
             name_norm,
             region_norm)
         SELECT
-            r.stdg_cd,
             r.pblib_id,
+            r.stdg_cd,
             r.rdrm_id,
 
             /* 원본 JSON에서 문자열 값 추출,
             JSON_EXTRACT -> JSON String("...") -> JSON_UNQUOTE으로 따옴표 제거 */
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.pblibNm')) AS pblib_nm,
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')) AS lclgv_nm,
-            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.rdrmNm')) AS rdrm_nm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.pblibNm')) AS pblibNm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')) AS lclgvNm,
+            JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.rdrmNm')) AS rdrmNm,
 
             /* 숫자: 빈문자열("") → NULL 처리 후 캐스팅, NOT NULL이면 0으로 보강 */
             COALESCE(CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.nowVstrCnt')), '') AS UNSIGNED), 0) AS nowVstrCnt,
@@ -45,16 +45,16 @@
             COALESCE(LOWER(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.payload, '$.lclgvNm')), ' ', '')), '') AS regionNorm
         FROM seat_raw_item r
         JOIN (
-            SELECT stdg_cd, pblib_id, rdrm_id, MAX(tot_dt) AS max_tot_dt
+            SELECT stdg_cd, pblib_id, rdrm_id, MAX(tot_dt) AS maxTotDt
             FROM seat_raw_item
             WHERE stdg_cd = #{key.stdgCd}
                 AND pblib_id = #{key.pblibId}
                 AND rdrm_id = #{key.rdrmId}
-            GROUP BY pblib_id, rdrm_id) t
+            GROUP BY stdg_cd, pblib_id, rdrm_id) t
             ON t.stdg_cd = r.stdg_cd
                 AND t.pblib_id = r.pblib_id
                 AND t.rdrm_id = r.rdrm_id
-                AND t.max_tot_dt = r.tot_dt
+                AND t.maxTotDt = r.tot_dt
         WHERE JSON_VALID(r.payload)
         ON DUPLICATE KEY UPDATE
             pblib_nm = VALUES(pblib_nm),

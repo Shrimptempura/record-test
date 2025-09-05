@@ -179,4 +179,21 @@ public class SeatIngestService {
 
     // page 처리 결과 묶음 (record)
     private record PageResult(int rawInserted, int currentUpserted) {}
+
+    // null/빈문자 제거 후 조합해서 간단 해시로 대체키 생성
+    private String synthKey(String... parts) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (StringUtils.hasText(p)) {
+                if (sb.length() > 0) sb.append('|');
+                sb.append(p.trim());
+            }
+        }
+        if (sb.length() == 0) {
+            return "UNK_" + System.nanoTime(); // 최후의 fallback
+        }
+        int h = sb.toString().hashCode();
+        return "UNK_" + Integer.toHexString(h);
+    }
+
 }
