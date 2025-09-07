@@ -60,7 +60,7 @@ public class SeatIngestService {
             }
 
             // 페이지 처리
-            PageResult r = processPageItems(resp, stdgCd, pblibId, rdrmId, rawJson);
+            PageResult r = processPageItems(resp, stdgCd, pblibId, rdrmId);
             totalRaw += r.rawInserted();
             totalCur += r.currentUpserted();
 
@@ -77,21 +77,26 @@ public class SeatIngestService {
 
     // 페이지 내 아이템 처리
     private PageResult processPageItems(SeatRealtimeResponse resp,
-                                        String stdgCd, String pblibId, String rdrmId,
-                                        String rawJsonForRaw) {
+                                        String stdgCdFromTarget, String pblibIdFromTarget, String rdrmIdFilter) {
         int rawInserted = 0;
         int curUpserted = 0;
 
         for (SeatRealtimeResponse.Item item : resp.body().items()) {
 
             // 요청 rdrmId가 지정되면 해당 아이템만 처리 (안전 필터)
-            if (StringUtils.hasText(rdrmId) && !rdrmId.equals(item.rdrmId())) {
+            if (StringUtils.hasText(rdrmIdFilter) && !rdrmIdFilter.equals(item.rdrmId())) {
                 continue;
             }
 
-            String keyPblibId = StringUtils.hasText(item.pblibId()) ? item.pblibId()
+            // CHANGED: stdgCd는 "아이템 값 우선", 없으면 타깃 stdgCd로 보강
+            String stdgForSave = StringUtils.hasText(item.stdgCd()) ? item.stdgCd() : stdgCdFromTarget;
+
+            // 키 보정(아이디가 비면 대체키 생성)
+            String keyPblibId = StringUtils.hasText(item.pblibId())
+                    ? item.pblibId()
                     : synthKey(item.pblibNm(), item.lclgvNm());
-            String keyRdrmId  = StringUtils.hasText(item.rdrmId())  ? item.rdrmId()
+            String keyRdrmId  = StringUtils.hasText(item.rdrmId())
+                    ? item.rdrmId()
                     : synthKey(item.rdrmNm());
 
             if (!StringUtils.hasText(keyPblibId) || !StringUtils.hasText(keyRdrmId)) {
@@ -100,15 +105,24 @@ public class SeatIngestService {
             }
 
             String totDt14 = normalizeTotDt(item.totDt());
-            // RAW: 아이템 단위 JSON 저장 (원하면 item만 직렬화해서 저장)
-            String itemJson = toItemJsonOr(rawJsonForRaw, item);
 
-            rawInserted += upsertRaw(stdgCd, keyPblibId, keyRdrmId, totDt14, itemJson);
+            // CHANGED: RAW 저장은 "아이템 JSON"으로 (페이지 전체 rawJson 아님)
+            String itemJson;
+            try {
+                itemJson = objectMapper.writeValueAsString(item);
+            } catch (Exception e) {
+                log.warn("[INGEST] item 직렬화 실패 → 스킵 (pblibId={}, rdrmId={}, totDt={})", keyPblibId, keyRdrmId, totDt14, e);
+                continue;
+            }
 
-            // CURRENT: 진짜 키(pblibId+rdrmId)가 있을 때만 최신 반영 (머터리얼라이즈 방식)
+            // RAW 업서트
+            rawInserted += upsertRaw(stdgForSave, keyPblibId, keyRdrmId, totDt14, itemJson);
+
+            // CHANGED: CURRENT 머터리얼라이즈는 "진짜 키"가 있을 때만 + stdgCd도 item/보강 값으로
             if (StringUtils.hasText(item.pblibId()) && StringUtils.hasText(item.rdrmId())) {
                 curUpserted += currentMapper.materializeLatestByKey(
-                        new CurrentRoomKey(item.stdgCd(), item.pblibId(), item.rdrmId()));
+                        new CurrentRoomKey(stdgForSave, item.pblibId(), item.rdrmId())
+                );
             }
         }
         return new PageResult(rawInserted, curUpserted);
@@ -147,15 +161,6 @@ public class SeatIngestService {
             return objectMapper.readValue(rawJson, SeatRealtimeResponse.class);
         } catch (Exception e) {
             throw new IllegalStateException("외부 응답 파싱 실패", e);
-        }
-    }
-
-    private String toItemJsonOr(String fallbackRaw, SeatRealtimeResponse.Item item) {
-        try {
-            return objectMapper.writeValueAsString(item);
-        } catch (Exception e) {
-            // 아이템만 직렬화 실패 시, 원본 raw를 그대로 보관(증거 용도)
-            return fallbackRaw;
         }
     }
 

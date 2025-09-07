@@ -51,7 +51,7 @@
     <input type="hidden" name="stdgCd" th:value="${stdgCd}">
     <label>
         표시개수
-        <input type="number" name="size" min="1" th:value="${size}">
+        <input type="number" name="size" min="1" max="500" th:value="${size}">
     </label>
     <input type="hidden" name="page" value="1"/> <!-- 검색 시 1페이지로 -->
     <button type="submit">검색</button>
@@ -90,11 +90,14 @@
 </table>
 
 <div class="pager">
+    <a th:if="${page > 1}" th:href="@{/seats(page=1, size=${size}, name=${name}, region=${region})}">⏮ 처음</a>
     <a th:if="${hasPrev}" th:href="@{/seats(page=${prevPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">◀ 이전</a>
     <span th:text="${page}">1</span>
     <span>/</span>
     <span th:text="${totalPages}">1</span>
     <a th:if="${hasNext}" th:href="@{/seats(page=${nextPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">다음 ▶</a>
+    <a th:if="${page < totalPages}" th:href="@{/seats(page=${totalPages}, size=${size}, name=${name}, region=${region})}">마지막 ⏭</a>
+
     <span class="spacer"></span>
     <span th:text="|총 ${total}건|">총 0건</span>
 </div>

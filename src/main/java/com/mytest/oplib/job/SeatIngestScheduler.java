@@ -22,7 +22,7 @@ public class SeatIngestScheduler {
     // 동시에 2번 돌지 않도록 잠금
     private final ReentrantLock lock = new ReentrantLock();
 
-    @Scheduled(cron = "#{@seatIngestProps.cron}")
+    @Scheduled(cron = "${seat.ingest.cron}")
     public void run() {
         if (!lock.tryLock()) {
             log.warn("SeatIngestScheduler - 이전 작업 실행중, 이번 실행은 스킵");
@@ -37,8 +37,9 @@ public class SeatIngestScheduler {
                     continue;
                 }
 
-                // 포맷: pblibId:stdgCd:rdrmId (정리중)
-                String[] arr = target.split(":");
+                // 포맷: pblibId:stdgCd:rdrmId
+//                String[] arr = target.split(":");
+                String[] arr = target.split(":", -1);
                 if (arr.length != 3) {
                     log.error("SeatIngestScheduler - 잘못된 타겟 포맷: {}", target);
                     continue;

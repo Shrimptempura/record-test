@@ -20,7 +20,7 @@
             #{pblibId},
             #{rdrmId},
             #{totDt},
-            CAST(#{payloadJson} AS JSON),
+            #{payloadJson},
             NOW())
         ON DUPLICATE KEY UPDATE
             payload = VALUES(payload),
