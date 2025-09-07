@@ -12,9 +12,9 @@ import java.util.List;
 
 // 스케줄링 버전 0905
 @RestController
-@RequestMapping("/seats")
+@RequestMapping("/api/v1/seats")
 @RequiredArgsConstructor
-public class SeatPageController {
+public class SeatApiController {
 
     private final SeatQueryService query;
 
