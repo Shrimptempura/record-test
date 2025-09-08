@@ -7,6 +7,12 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class HttpConfig {
 
+
+    /**
+     * rest client bean @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * @param builder
+     * @return
+     */
     @Bean
     RestClient restClient(RestClient.Builder builder) {
         return builder.build();

@@ -26,7 +26,14 @@ public class SeatIngestService {
 
     /**
      * 스케줄러가 부르는 단일 타깃 진입점.
-     * - pblibId/stdgCd/rdrmId/numOfRows를 받아 페이지 끝까지 수집
+     * - 특정타깃(pblibId/stdgCd/rdrmId)에 대해 1페이지부터 끝 페이지까지 반복 수집
+     * = "언제 멈출지/어떻게 페이지를 진전시킬지 등"같은 흐름(오케스트레이션)을 한곳에서 관리
+     * = client.fetch(): 원본 JSON 수신
+     * = parseOrThrow(): JSON → DTO 역직렬화 파싱
+     * = OpenApiResultValidator.validate(): 헤더 코드 검증
+     * = 아이템 유무 확인(없으면 그대로 종료)
+     * = 페이지 처리: processPageItems()에서 RAW 적재 + CURRENT 머터리얼라이즈 반영
+     * = isLastPage(): 마지막 페이지 판단 -> 종료 or 다음 페이지
      */
     @Transactional
     public void ingestOneTarget(String pblibId, String stdgCd, String rdrmId, int numOfRows) {
@@ -75,7 +82,17 @@ public class SeatIngestService {
                 pblibId, stdgCd, rdrmId, totalRaw, totalCur);
     }
 
-    // 페이지 내 아이템 처리
+    /**
+     * 한 페이지의 아이템들을 돌며, 각 아이템을 정규화하고 저장
+     * - 한 페이지 안에서 일관된 규칙(필터/정규화/저장/머터리얼라이즈)을 모아두면, 상위는 페이지 반복만 신경씀
+     * = rdrmIdFilter가 지정되면 해당 아이템만 처리
+     * = stdgCd는 "아이템 값 우선", 없으면 타깃 값으로 보강
+     * = 키 결정: 원본 pblibId/rdrmId가 있으면 사용, 없으면 (옵션) synthKey()로 대체키 생성(=RAW 저장용)
+     * = totDt 정규화: 14자리로 맞춤
+     * = RAW에 아이템 단위 JSON을 업서트(페이지 JSON 전체가 아니라 개별 아이템 상태 보존)
+     * = CURRENT 머터리얼라이즈는 "진짜 키"가 있을 때만 수행 + stdgCd도 item/보강 값으로
+     *      - RAW는 감사/재처리 목적으로 최대한 남기고, 조회용 CURRENT는 신뢰 가능한 키만 반영해 품질 보장
+     */
     private PageResult processPageItems(SeatRealtimeResponse resp,
                                         String stdgCdFromTarget, String pblibIdFromTarget, String rdrmIdFilter) {
         int rawInserted = 0;
@@ -143,6 +160,11 @@ public class SeatIngestService {
     }
 
     // 마지막 페이지 판단 (totalCount 우선, 없으면 휴리스틱)
+
+    /**
+     * totalCount가 있으면 공식 계산, 없으면 휴리스틱(이번 페이지 item 수 < 요청한 rows 수)로 종료 판단
+     * - 외부 API가 항상 totalCount를 주지 않거나 부정확한 경우 때문에 안전한 종료를 위한 방어 로직 필요
+     */
     private boolean isLastPage(SeatRealtimeResponse resp, int pageNo, int numOfRows) {
         int totalCount = safeInt(resp.body() != null ? resp.body().totalCount() : null);
         if (totalCount > 0) {
@@ -168,6 +190,7 @@ public class SeatIngestService {
         return v == null || v.isBlank() ? fb : v;
     }
 
+    // 다양한 길이의 시간 문자열을 고정 14자리로 맞춤
     private String normalizeTotDt(String raw) {
         if (raw == null || raw.isBlank()) return "00000000000000";
         String s = raw.trim();
@@ -186,6 +209,19 @@ public class SeatIngestService {
     private record PageResult(int rawInserted, int currentUpserted) {}
 
     // null/빈문자 제거 후 조합해서 간단 해시로 대체키 생성
+    // 원본 키가 비어도 RAW 적재는 하겠다는 관대한 정책(Lenient)을 위한 임시 식별자 생성기
+    /**
+     * synthKey(합성키)
+     * - 원본에서 pblibId/rdrmId가 비어온 경우, 임시로 만들어 쓰는 키 ex) UNK_a1b2c3d4
+     * - RAW를 최대한 보존하기 위해, 원본이 불완전해도 "무슨 데이터가 들어왔는지" 기록으로
+     *      추후 매핑 테이블이나 수작업으로 복구/분석용
+     * = 임시키는 충돌 가능/식별 신뢰도 하락, 그래서 CURRENT(조회 기준)에는 사용하지 않음
+     *
+     * Strict 모드
+     * = 실키(진짜 원본 ID)가 없는 아이템은 아에 스킵한다(=synthKey 생성도 하지 않음)
+     * = 장점: 코드 단순/데이터 일관성 좋음/CURRENT 품질 보장
+     * = 단점: RAW 보존률 낮음(원본 누락이 아에 버려짐)
+     */
     private String synthKey(String... parts) {
         StringBuilder sb = new StringBuilder();
         for (String p : parts) {

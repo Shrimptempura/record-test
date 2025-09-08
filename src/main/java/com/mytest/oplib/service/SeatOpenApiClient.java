@@ -11,6 +11,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 
+/**
+ * 관심사 분리 = Clinet, 이제 service로 대부분 넘김
+ * 호출: SeatIngestScheduler(스케쥴러), SeatIngestService(페이지 루프를 돌면서 Client.featch() 호출),
+ *      SeatQueryService(화면/REST용 조회 서비스)
+ * 요약: 외부 Open API를 호출해서 JSON 원본 데이터를 가져오는 역할
+ */
 @Slf4j
 @Component      // 외부 api 어댑터 성격이라 component, (service도 가능)
 @RequiredArgsConstructor
