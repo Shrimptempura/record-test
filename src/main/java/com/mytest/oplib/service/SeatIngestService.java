@@ -14,6 +14,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+/**
+ * 1) 아이템 정규화 한 곳으로 모으기
+ *      - processPageItems() 안에 흩어진 널/빈/보강/시간포맷/직렬화를 정규화 함수 1개로 모은다
+ *      = 루프가 저장/머터리얼라이즈 2줄로 정리됨
+ * 2) 페이지 종료/헤더 검증 가드 정리
+ *      - isLastPage 경계값 보정, numOfRows <= 0 방어, MAX_PAGES 상한 등 안전장치 추가
+ *      = 무한 르프/이상 응답에 대한 운영 안정성 확보
+ * 3) 정책 스위치 도입(Strict(키 엄격)/Lenient(키 관대) 모드)
+ *     - Strict: 실키 없으면 스킵, Lenient: RAW만 synthKey 허용, CURRENT는 실키만
+ *     = 프로젝트 성격에 맞게 일관된 정책 적용
+ * 4) 작은 역할 외부화(클래스 분리)
+ *    - SeatItemNormalizer(정규화) -> SeatCurrentMaterializer(머터리얼라이즈) -> OpenApiPageInspector(페이지 종료 판단)
+ *    - -> SeatRawWriter(RAW 배치)
+ */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
