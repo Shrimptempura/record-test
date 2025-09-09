@@ -6,13 +6,15 @@ import com.mytest.oplib.dao.SeatRawItemMapper;
 import com.mytest.oplib.dto.CurrentRoomKey;
 import com.mytest.oplib.dto.SeatRawUpsertCmd;
 import com.mytest.oplib.dto.SeatRealtimeResponse;
+import com.mytest.oplib.service.ingest.SeatItemNormalizer;
 import com.mytest.oplib.util.OpenApiResultValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+
+import java.util.Optional;
 
 /**
  * 1) 아이템 정규화 한 곳으로 모으기
@@ -39,6 +41,12 @@ public class SeatIngestService {
     private final SeatCurrentRoomMapper currentMapper; // CURRENT 업서트/머터리얼라이즈
     private final ObjectMapper objectMapper;
 
+    // 1단계 분리: 정규화 전담 컴포넌트
+    private final SeatItemNormalizer normalizer;
+
+    // 최대 페이지 상한 (무한루프 방지)
+    private static final int MAX_PAGES = 1000;
+
     /**
      * 스케줄러가 부르는 단일 타깃 진입점.
      * - 특정타깃(pblibId/stdgCd/rdrmId)에 대해 1페이지부터 끝 페이지까지 반복 수집
@@ -56,10 +64,21 @@ public class SeatIngestService {
         int totalRaw = 0;
         int totalCur = 0;
 
+        // nomOfRows 방어
+        if (numOfRows <= 0) {
+            log.warn("SeatIngestService - numOfRows <= 0 방어, 1로 보정");
+            numOfRows = 1;
+        }
+
         while (true) {
+            if (pageNo > MAX_PAGES) {
+                log.warn("SeatIngestService - 페이지 상한 도달 → 종료 (pblibId={}, rdrmId={})", MAX_PAGES, pblibId, rdrmId);
+                break;
+            }
+
             String rawJson = client.fetch(pblibId, rdrmId, Integer.valueOf(pageNo), Integer.valueOf(numOfRows));
             if (rawJson == null || rawJson.isBlank()) {
-                log.info("[INGEST] 빈 응답 → 종료 (pblibId={}, stdgCd={}, rdrmId={}, pageNo={})", pblibId, stdgCd, rdrmId, pageNo);
+                log.info("SeatIngestService - 빈 응답 → 종료 (pblibId={}, stdgCd={}, rdrmId={}, pageNo={})", pblibId, stdgCd, rdrmId, pageNo);
                 break;
             }
 
@@ -71,13 +90,14 @@ public class SeatIngestService {
             try {
                 OpenApiResultValidator.validate(code, msg);
             } catch (Exception ex) {
-                log.warn("[INGEST] 헤더 검증 실패 → 종료 (code={}, msg={}, pageNo={})", code, msg, pageNo);
+                log.warn("SeatIngestService - 헤더 검증 실패 → 종료 (code={}, msg={}, pageNo={})", code, msg, pageNo);
                 break;
             }
 
             // 아이템 없으면 종료
-            if (resp.body() == null || resp.body().items() == null || resp.body().items().isEmpty()) {
-                log.info("[INGEST] 아이템 없음 → 종료 (pageNo={})", pageNo);
+            SeatRealtimeResponse.Body body = resp.body();
+            if (body == null || body.items() == null || body.items().isEmpty()) {
+                log.info("SeatIngestService - 아이템 없음 → 종료 (pageNo={})", pageNo);
                 break;
             }
 
@@ -86,6 +106,9 @@ public class SeatIngestService {
             totalRaw += r.rawInserted();
             totalCur += r.currentUpserted();
 
+            // 페이지 요약 로그
+            log.info("SeatIngestService - page={}, item{}, raw+={}, cur+={}", pageNo, body.items().size(), r.rawInserted(), r.currentUpserted());
+
             // 마지막 페이지 판단
             if (isLastPage(resp, pageNo, numOfRows)) {
                 break;
@@ -93,7 +116,7 @@ public class SeatIngestService {
             pageNo++;
         }
 
-        log.info("[INGEST] done target: pblibId={}, stdgCd={}, rdrmId={}, rawInserted={}, currentUpserted={}",
+        log.info("SeatIngestService - done target: pblibId={}, stdgCd={}, rdrmId={}, rawInserted={}, currentUpserted={}",
                 pblibId, stdgCd, rdrmId, totalRaw, totalCur);
     }
 
@@ -113,47 +136,36 @@ public class SeatIngestService {
         int rawInserted = 0;
         int curUpserted = 0;
 
-        for (SeatRealtimeResponse.Item item : resp.body().items()) {
+        SeatRealtimeResponse.Body body = resp.body();
 
-            // 요청 rdrmId가 지정되면 해당 아이템만 처리 (안전 필터)
-            if (StringUtils.hasText(rdrmIdFilter) && !rdrmIdFilter.equals(item.rdrmId())) {
+        for (SeatRealtimeResponse.Item item : body.items()) {
+            // 타깃 vs 아이템 불일치 탐지 (디버깅용)
+            if (pblibIdFromTarget != null && item.pblibId() != null
+                    && !pblibIdFromTarget.equals(item.pblibId())) {
+                log.warn("[MISMATCH] pblibId target={}, item={}", pblibIdFromTarget, item.pblibId());
+            }
+            if (stdgCdFromTarget != null && item.stdgCd() != null
+                    && !stdgCdFromTarget.equals(item.stdgCd())) {
+                log.warn("[MISMATCH] stdgCd target={}, item={}", stdgCdFromTarget, item.stdgCd());
+            }
+
+            // 정규화 로직을 외부 클래스로 이관 (Lenient 고정)
+            Optional<SeatItemNormalizer.NormalizedItem> normOpt = normalizer.normalize(item, stdgCdFromTarget, rdrmIdFilter);
+            if (normOpt.isEmpty()) {
                 continue;
             }
 
-            // CHANGED: stdgCd는 "아이템 값 우선", 없으면 타깃 stdgCd로 보강
-            String stdgForSave = StringUtils.hasText(item.stdgCd()) ? item.stdgCd() : stdgCdFromTarget;
-
-            // 키 보정(아이디가 비면 대체키 생성)
-            String keyPblibId = StringUtils.hasText(item.pblibId())
-                    ? item.pblibId()
-                    : synthKey(item.pblibNm(), item.lclgvNm());
-            String keyRdrmId  = StringUtils.hasText(item.rdrmId())
-                    ? item.rdrmId()
-                    : synthKey(item.rdrmNm());
-
-            if (!StringUtils.hasText(keyPblibId) || !StringUtils.hasText(keyRdrmId)) {
-                log.warn("[INGEST] 키 부족 → 스킵 (pblibId={}, rdrmId={})", keyPblibId, keyRdrmId);
-                continue;
-            }
-
-            String totDt14 = normalizeTotDt(item.totDt());
-
-            // CHANGED: RAW 저장은 "아이템 JSON"으로 (페이지 전체 rawJson 아님)
-            String itemJson;
-            try {
-                itemJson = objectMapper.writeValueAsString(item);
-            } catch (Exception e) {
-                log.warn("[INGEST] item 직렬화 실패 → 스킵 (pblibId={}, rdrmId={}, totDt={})", keyPblibId, keyRdrmId, totDt14, e);
-                continue;
-            }
+            // return된 record dto
+            SeatItemNormalizer.NormalizedItem itemX = normOpt.get();
 
             // RAW 업서트
-            rawInserted += upsertRaw(stdgForSave, keyPblibId, keyRdrmId, totDt14, itemJson);
+            rawInserted += upsertRaw(itemX.stdgCd(), itemX.keyPblibId(), itemX.keyRdrmId(), itemX.totDt14(), itemX.payloadJson());
 
             // CHANGED: CURRENT 머터리얼라이즈는 "진짜 키"가 있을 때만 + stdgCd도 item/보강 값으로
-            if (StringUtils.hasText(item.pblibId()) && StringUtils.hasText(item.rdrmId())) {
+            if (itemX.hasRealKey()) {
+                // 반드시 원본 실키로 머터리어라이즈
                 curUpserted += currentMapper.materializeLatestByKey(
-                        new CurrentRoomKey(stdgForSave, item.pblibId(), item.rdrmId())
+                        new CurrentRoomKey(itemX.stdgCd(), itemX.realPblibId(), itemX.realRdrmId())
                 );
             }
         }
@@ -175,17 +187,21 @@ public class SeatIngestService {
     }
 
     // 마지막 페이지 판단 (totalCount 우선, 없으면 휴리스틱)
-
     /**
      * totalCount가 있으면 공식 계산, 없으면 휴리스틱(이번 페이지 item 수 < 요청한 rows 수)로 종료 판단
      * - 외부 API가 항상 totalCount를 주지 않거나 부정확한 경우 때문에 안전한 종료를 위한 방어 로직 필요
      */
     private boolean isLastPage(SeatRealtimeResponse resp, int pageNo, int numOfRows) {
+        // 경계 보정
+        if (pageNo < 1) pageNo = 1;
+        if (numOfRows < 1) numOfRows = 1;
+
         int totalCount = safeInt(resp.body() != null ? resp.body().totalCount() : null);
         if (totalCount > 0) {
             int last = (totalCount + numOfRows - 1) / numOfRows;
             return pageNo >= last;
         }
+
         // totalCount 없으면, 현재 페이지 아이템 수가 페이지 크기 미만이면 마지막으로 간주
         int size = (resp.body() != null && resp.body().items() != null) ? resp.body().items().size() : 0;
         return size < numOfRows;
@@ -205,15 +221,6 @@ public class SeatIngestService {
         return v == null || v.isBlank() ? fb : v;
     }
 
-    // 다양한 길이의 시간 문자열을 고정 14자리로 맞춤
-    private String normalizeTotDt(String raw) {
-        if (raw == null || raw.isBlank()) return "00000000000000";
-        String s = raw.trim();
-        if (s.length() >= 14) return s.substring(0, 14);
-        if (s.length() == 12) return s + "00";
-        if (s.length() == 8)  return s + "000000";
-        return "00000000000000";
-    }
 
     private int safeInt(String s) {
         if (s == null) return 0;
@@ -222,34 +229,5 @@ public class SeatIngestService {
 
     // page 처리 결과 묶음 (record)
     private record PageResult(int rawInserted, int currentUpserted) {}
-
-    // null/빈문자 제거 후 조합해서 간단 해시로 대체키 생성
-    // 원본 키가 비어도 RAW 적재는 하겠다는 관대한 정책(Lenient)을 위한 임시 식별자 생성기
-    /**
-     * synthKey(합성키)
-     * - 원본에서 pblibId/rdrmId가 비어온 경우, 임시로 만들어 쓰는 키 ex) UNK_a1b2c3d4
-     * - RAW를 최대한 보존하기 위해, 원본이 불완전해도 "무슨 데이터가 들어왔는지" 기록으로
-     *      추후 매핑 테이블이나 수작업으로 복구/분석용
-     * = 임시키는 충돌 가능/식별 신뢰도 하락, 그래서 CURRENT(조회 기준)에는 사용하지 않음
-     *
-     * Strict 모드
-     * = 실키(진짜 원본 ID)가 없는 아이템은 아에 스킵한다(=synthKey 생성도 하지 않음)
-     * = 장점: 코드 단순/데이터 일관성 좋음/CURRENT 품질 보장
-     * = 단점: RAW 보존률 낮음(원본 누락이 아에 버려짐)
-     */
-    private String synthKey(String... parts) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : parts) {
-            if (StringUtils.hasText(p)) {
-                if (sb.length() > 0) sb.append('|');
-                sb.append(p.trim());
-            }
-        }
-        if (sb.length() == 0) {
-            return "UNK_" + System.nanoTime(); // 최후의 fallback
-        }
-        int h = sb.toString().hashCode();
-        return "UNK_" + Integer.toHexString(h);
-    }
 
 }

@@ -97,7 +97,21 @@ public class SeatItemNormalizer {
 
 
     // --- helper methods -----------------------------------
+
     // 간단 합성키(Lenient 전용)
+    // 여기서의 StringUtils.hasText()는 id가 아니라 nm검사임
+    /**
+     * synthKey(합성키)
+     * - 원본에서 pblibId/rdrmId가 비어온 경우, 임시로 만들어 쓰는 키 ex) UNK_a1b2c3d4
+     * - RAW를 최대한 보존하기 위해, 원본이 불완전해도 "무슨 데이터가 들어왔는지" 기록으로
+     *      추후 매핑 테이블이나 수작업으로 복구/분석용
+     * = 임시키는 충돌 가능/식별 신뢰도 하락, 그래서 CURRENT(조회 기준)에는 사용하지 않음
+     *
+     * Strict 모드
+     * = 실키(진짜 원본 ID)가 없는 아이템은 아에 스킵한다(=synthKey 생성도 하지 않음)
+     * = 장점: 코드 단순/데이터 일관성 좋음/CURRENT 품질 보장
+     * = 단점: RAW 보존률 낮음(원본 누락이 아에 버려짐)
+     */
     private String synthKey(String... parts) {
         StringBuilder sb = new StringBuilder();
         for (String p : parts) {

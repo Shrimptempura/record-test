@@ -45,6 +45,8 @@ public class SeatOpenApiClient {
             builder.queryParam("numOfRows", numOfRows);
         }
 
+        log.info("[FETCH] pblibId={}, rdrmId={}, pageNo={}, numOfRows={}", pblibId, rdrmId, pageNo, numOfRows);
+
         URI uri = builder.build(true).toUri();
 
         log.info("[CLIENT] uri={}", uri);
