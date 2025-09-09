@@ -7,9 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * 해당 스케줄러는 SeatIngestService를 시간마다 돌림
+ * SeatIngestService는 OpenAPI에서 좌석현황 데이터를 가져와 DB에 저장하는 역할임
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -30,33 +36,13 @@ public class SeatIngestScheduler {
         }
 
         try {
-            log.info("SeatIngestScheduler - 시작: targets={}, numOfRows={}", props.targets(), props.numOfRows());
+            log.info("SeatIngestScheduler - 시작 - numOfRows={}", props.numOfRows());
 
-            for (String target : props.targets()) {
-                if (target == null || target.isBlank()) {
-                    continue;
-                }
-
-                // 포맷: pblibId:stdgCd:rdrmId
-//                String[] arr = target.split(":");
-                String[] arr = target.split(":", -1);
-                if (arr.length != 3) {
-                    log.error("SeatIngestScheduler - 잘못된 타겟 포맷: {}", target);
-                    continue;
-                }
-
-                String pblibId = arr[0];
-                String stdgCd = arr[1];
-                String rdrmId = arr[2];
-
-                try {
-                    service.ingestOneTarget(pblibId, stdgCd, rdrmId, props.numOfRows());
-                    log.info("SeatIngestScheduler - 완료: pblibId: {}, stdgCd: {}, rdrmId: {}", pblibId, stdgCd, rdrmId);
-                } catch (Exception e) {
-                    log.error("SeatIngestScheduler - 작업 중 오류 발생: pblibId: {}, stdgCd: {}, rdrmId: {}", pblibId, stdgCd, rdrmId, e);
-                }
-            }
-            log.info("SeatIngestScheduler - 전체 작업 완료");
+            // 타깃 없이 전체 수집
+            service.ingestOneTarget(null, null, null, props.numOfRows());
+            log.info("SeatIngestScheduler - 전체 대상 수집 완료");
+        } catch (Exception e) {
+            log.error("SeatIngestScheduler - 작업 중 예외 발생", e);
         } finally {
             lock.unlock();
         }

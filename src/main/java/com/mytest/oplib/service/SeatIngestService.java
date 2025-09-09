@@ -30,7 +30,6 @@ import java.util.Optional;
  *    - SeatItemNormalizer(정규화) -> SeatCurrentMaterializer(머터리얼라이즈) -> OpenApiPageInspector(페이지 종료 판단)
  *    - -> SeatRawWriter(RAW 배치)
  */
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -57,6 +56,11 @@ public class SeatIngestService {
      * = 아이템 유무 확인(없으면 그대로 종료)
      * = 페이지 처리: processPageItems()에서 RAW 적재 + CURRENT 머터리얼라이즈 반영
      * = isLastPage(): 마지막 페이지 판단 -> 종료 or 다음 페이지
+     *
+     *  *    ==== 수정됨 ====
+     *  *    타깃제외
+     *  *    전량 수집 - 세 값 모두 null로 호출
+     *  *    스케줄러의 진입점(호출당함)
      */
     @Transactional
     public void ingestOneTarget(String pblibId, String stdgCd, String rdrmId, int numOfRows) {
@@ -72,7 +76,7 @@ public class SeatIngestService {
 
         while (true) {
             if (pageNo > MAX_PAGES) {
-                log.warn("SeatIngestService - 페이지 상한 도달 → 종료 (pblibId={}, rdrmId={})", MAX_PAGES, pblibId, rdrmId);
+                log.warn("SeatIngestService - 페이지 상한 도달 → 종료 - pblibId:{}, rdrmId:{}", MAX_PAGES, pblibId, rdrmId);
                 break;
             }
 
@@ -102,12 +106,12 @@ public class SeatIngestService {
             }
 
             // 페이지 처리
-            PageResult r = processPageItems(resp, stdgCd, pblibId, rdrmId);
+            PageResult r = processPageItems(resp);
             totalRaw += r.rawInserted();
             totalCur += r.currentUpserted();
 
             // 페이지 요약 로그
-            log.info("SeatIngestService - page={}, item{}, raw+={}, cur+={}", pageNo, body.items().size(), r.rawInserted(), r.currentUpserted());
+            log.info("SeatIngestService - page={}, items{}, raw+={}, cur+={}", pageNo, body.items().size(), r.rawInserted(), r.currentUpserted());
 
             // 마지막 페이지 판단
             if (isLastPage(resp, pageNo, numOfRows)) {
@@ -131,26 +135,25 @@ public class SeatIngestService {
      * = CURRENT 머터리얼라이즈는 "진짜 키"가 있을 때만 수행 + stdgCd도 item/보강 값으로
      *      - RAW는 감사/재처리 목적으로 최대한 남기고, 조회용 CURRENT는 신뢰 가능한 키만 반영해 품질 보장
      */
-    private PageResult processPageItems(SeatRealtimeResponse resp,
-                                        String stdgCdFromTarget, String pblibIdFromTarget, String rdrmIdFilter) {
+    private PageResult processPageItems(SeatRealtimeResponse resp) {
         int rawInserted = 0;
         int curUpserted = 0;
 
         SeatRealtimeResponse.Body body = resp.body();
 
         for (SeatRealtimeResponse.Item item : body.items()) {
-            // 타깃 vs 아이템 불일치 탐지 (디버깅용)
-            if (pblibIdFromTarget != null && item.pblibId() != null
-                    && !pblibIdFromTarget.equals(item.pblibId())) {
-                log.warn("[MISMATCH] pblibId target={}, item={}", pblibIdFromTarget, item.pblibId());
-            }
-            if (stdgCdFromTarget != null && item.stdgCd() != null
-                    && !stdgCdFromTarget.equals(item.stdgCd())) {
-                log.warn("[MISMATCH] stdgCd target={}, item={}", stdgCdFromTarget, item.stdgCd());
-            }
+//            // 타깃 vs 아이템 불일치 탐지 (디버깅용)
+//            if (pblibIdFromTarget != null && item.pblibId() != null
+//                    && !pblibIdFromTarget.equals(item.pblibId())) {
+//                log.warn("[MISMATCH] pblibId target={}, item={}", pblibIdFromTarget, item.pblibId());
+//            }
+//            if (stdgCdFromTarget != null && item.stdgCd() != null
+//                    && !stdgCdFromTarget.equals(item.stdgCd())) {
+//                log.warn("[MISMATCH] stdgCd target={}, item={}", stdgCdFromTarget, item.stdgCd());
+//            }
 
             // 정규화 로직을 외부 클래스로 이관 (Lenient 고정)
-            Optional<SeatItemNormalizer.NormalizedItem> normOpt = normalizer.normalize(item, stdgCdFromTarget, rdrmIdFilter);
+            Optional<SeatItemNormalizer.NormalizedItem> normOpt = normalizer.normalize(item);
             if (normOpt.isEmpty()) {
                 continue;
             }

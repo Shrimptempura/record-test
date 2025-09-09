@@ -22,23 +22,20 @@ public class SeatItemNormalizer {
 
     private final ObjectMapper objectMapper;
 
-    // 아이템 1건 정규화(Lenient 고정)
     /**
      * 아이템 1건 정규화 (Lenient 고정)
      * @param item             OpenAPI 응답 아이템
      * @param stdgCdFromTarget 스케줄러/타깃에서 전달된 stdgCd (보강용)
      * @param rdrmIdFilter     처리할 rdrmId가 지정된 경우(없으면 전체)
      */
-    public Optional<NormalizedItem> normalize(SeatRealtimeResponse.Item item,
-                                              String stdgCdFromTarget,
-                                              String rdrmIdFilter) {
-        // 1) 필터: 요청 rdrmId가 지정된 경우 그 외는 스킵
-        if (StringUtils.hasText(rdrmIdFilter) && !rdrmIdFilter.equals(item.rdrmId())) {
-            return Optional.empty();
-        }
+    public Optional<NormalizedItem> normalize(SeatRealtimeResponse.Item item) {
+//        // 1) 필터: 요청 rdrmId가 지정된 경우 그 외는 스킵
+//        if (StringUtils.hasText(rdrmIdFilter) && !rdrmIdFilter.equals(item.rdrmId())) {
+//            return Optional.empty();
+//        }
 
         // 2) stdgCd: 아이템 값 우선, 없으면 타깃값
-        String stdg = StringUtils.hasText(item.stdgCd()) ? item.stdgCd() : stdgCdFromTarget;
+        String stdg = StringUtils.hasText(item.stdgCd()) ? item.stdgCd() : "UNKNOWN";
         
         // raw에는 key(실키면 실키, 없으면 syntheky(합성키))
         // current material(cuurent_room)은 real 키 사용
