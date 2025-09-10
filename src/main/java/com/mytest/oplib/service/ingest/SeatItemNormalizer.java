@@ -9,10 +9,12 @@ import org.springframework.util.StringUtils;
 import java.util.Optional;
 
 /**
- * 아이템 1건을 "정규화"하는 책임만 가진 컴포넌트 (Lenient 고정)
- * - 필터(rdrmId)
- * - stdgCd 보강(아이템 우선, 없으면 타깃값)
- * - 키 결정: 실키가 없으면 synthKey로 대체(단, CURRENT는 여전히 실키만 반영해야 함)
+ * (전량 수집 기준) 아이템 1건 "정규화" 전담 컴포넌트
+ * - 타깃/필터 개념 제거  // REMOVED: rdrmId 필터, 타깃 기반 stdgCd 보강
+ * - stdgCd: 아이템 값 사용, 없으면 "UNKNOWN"
+ * - 키 결정( Lenient ): 실키(pblibId, rdrmId) 둘 다 있으면 그대로 사용
+ *                      하나라도 비면 synthKey로 대체키 생성( RAW 저장용 )
+ *   ※ CURRENT(조회용) 반영은 항상 "실키가 있는 경우에만" 진행 (서비스에서 결정)
  * - totDt 14자리 정규화
  * - 아이템 JSON 직렬화(payload)
  */
@@ -22,33 +24,20 @@ public class SeatItemNormalizer {
 
     private final ObjectMapper objectMapper;
 
-    /**
-     * 아이템 1건 정규화 (Lenient 고정)
-     * @param item             OpenAPI 응답 아이템
-     * @param stdgCdFromTarget 스케줄러/타깃에서 전달된 stdgCd (보강용)
-     * @param rdrmIdFilter     처리할 rdrmId가 지정된 경우(없으면 전체)
-     */
     public Optional<NormalizedItem> normalize(SeatRealtimeResponse.Item item) {
-//        // 1) 필터: 요청 rdrmId가 지정된 경우 그 외는 스킵
-//        if (StringUtils.hasText(rdrmIdFilter) && !rdrmIdFilter.equals(item.rdrmId())) {
-//            return Optional.empty();
-//        }
-
-        // 2) stdgCd: 아이템 값 우선, 없으면 타깃값
+        // 1) stdgCd: 아이템 값 사용, 없으면 "UNKNOWN"
         String stdg = StringUtils.hasText(item.stdgCd()) ? item.stdgCd() : "UNKNOWN";
         
-        // raw에는 key(실키면 실키, 없으면 syntheky(합성키))
-        // current material(cuurent_room)은 real 키 사용
-
-        // 3) 키 결정(Lenient): 실키가 없으면 synthKey로 대체키 생성
+        // 2) 키 결정, 실키(real) 존재 여부
         // realP, realR: 원본에서 온 진짜 키
         String realPblibId = item.pblibId();
         String realRdrmId = item.rdrmId();
         boolean hasRealKey = StringUtils.hasText(realPblibId) && StringUtils.hasText(realRdrmId);
 
-        // 저장에 실제 쓸값(실키가 있으면 그대로, 없으면 합성키)
+        // 저장용 키(RAW 멱등키 구성요소): 실키가 있으면 실키 그대로, 없으면 합성키
         String savePblibId  = realPblibId;
         String saveRdrmId = realRdrmId;
+
         if (!hasRealKey) {
             //  pblib 합성키 재료: [도서관명, 지자체명]
             savePblibId = StringUtils.hasText(savePblibId)
@@ -61,15 +50,15 @@ public class SeatItemNormalizer {
                     : synthKey(item.pblibNm(), item.rdrmNm(), item.lclgvNm());
 
             // 둘중 하나라도 없으면 저장 불가 -> 스킵
-            if (!StringUtils.hasText(savePblibId) && !StringUtils.hasText(saveRdrmId)) {
+            if (!StringUtils.hasText(savePblibId) || !StringUtils.hasText(saveRdrmId)) {
                 return Optional.empty();
             }
         }
 
-        // 4) 시간 정규화
+        // 3) 시간 정규화
         String tot = normalizeTotDt(item.totDt());
 
-        // 5) JSON 직렬화(아이템 단위 RAW payload)
+        // 4) JSON 직렬화(아이템 단위 RAW payload)
         String payloadJson;
         try {
             payloadJson = objectMapper.writeValueAsString(item);
@@ -108,6 +97,11 @@ public class SeatItemNormalizer {
      * = 실키(진짜 원본 ID)가 없는 아이템은 아에 스킵한다(=synthKey 생성도 하지 않음)
      * = 장점: 코드 단순/데이터 일관성 좋음/CURRENT 품질 보장
      * = 단점: RAW 보존률 낮음(원본 누락이 아에 버려짐)
+     */
+    /**
+     * synthKey(합성키)
+     * - 실키가 비는 경우 RAW 보존을 위해 임시 식별자 생성(예: UNK_a1b2c3)
+     * - CURRENT(조회 기준)에는 사용하지 않음
      */
     private String synthKey(String... parts) {
         StringBuilder sb = new StringBuilder();

@@ -32,6 +32,7 @@ public class SeatOpenApiClient {
     private final RestClient restClient;
     private final LibSeatProps props;
 
+    // pageNo, numOfRows는 null 허용 -> Integer
     public String fetch(String pblibId, String rdrmId, Integer pageNo, Integer numOfRows) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(props.getBaseUrl())
                 .queryParam("serviceKey", props.getServiceKey().trim())

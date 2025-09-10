@@ -119,9 +119,13 @@ public class SeatIngestService {
             }
             pageNo++;
         }
+        // CHANGED: 전량일 경우 'ALL'로 표시
+        String filterLabel = (pblibId == null && stdgCd == null && rdrmId == null)
+                ? "ALL"
+                : String.format("pblibId=%s, stdgCd=%s, rdrmId=%s", pblibId, stdgCd, rdrmId);
 
-        log.info("SeatIngestService - done target: pblibId={}, stdgCd={}, rdrmId={}, rawInserted={}, currentUpserted={}",
-                pblibId, stdgCd, rdrmId, totalRaw, totalCur);
+        log.info("SeatIngestService - done (filter: {}), rawInserted={}, currentUpserted={}",
+                filterLabel, totalRaw, totalCur);
     }
 
     /**
@@ -142,16 +146,6 @@ public class SeatIngestService {
         SeatRealtimeResponse.Body body = resp.body();
 
         for (SeatRealtimeResponse.Item item : body.items()) {
-//            // 타깃 vs 아이템 불일치 탐지 (디버깅용)
-//            if (pblibIdFromTarget != null && item.pblibId() != null
-//                    && !pblibIdFromTarget.equals(item.pblibId())) {
-//                log.warn("[MISMATCH] pblibId target={}, item={}", pblibIdFromTarget, item.pblibId());
-//            }
-//            if (stdgCdFromTarget != null && item.stdgCd() != null
-//                    && !stdgCdFromTarget.equals(item.stdgCd())) {
-//                log.warn("[MISMATCH] stdgCd target={}, item={}", stdgCdFromTarget, item.stdgCd());
-//            }
-
             // 정규화 로직을 외부 클래스로 이관 (Lenient 고정)
             Optional<SeatItemNormalizer.NormalizedItem> normOpt = normalizer.normalize(item);
             if (normOpt.isEmpty()) {
