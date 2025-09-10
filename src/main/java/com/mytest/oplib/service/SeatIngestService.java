@@ -1,6 +1,7 @@
 package com.mytest.oplib.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mytest.oplib.config.SeatIngestProps;
 import com.mytest.oplib.dao.SeatCurrentRoomMapper;
 import com.mytest.oplib.dao.SeatRawItemMapper;
 import com.mytest.oplib.dto.CurrentRoomKey;
@@ -39,12 +40,10 @@ public class SeatIngestService {
     private final SeatRawItemMapper rawMapper;       // RAW 업서트
     private final SeatCurrentRoomMapper currentMapper; // CURRENT 업서트/머터리얼라이즈
     private final ObjectMapper objectMapper;
+    private final SeatIngestProps props;
 
     // 1단계 분리: 정규화 전담 컴포넌트
     private final SeatItemNormalizer normalizer;
-
-    // 최대 페이지 상한 (무한루프 방지)
-    private static final int MAX_PAGES = 1000;
 
     /**
      * 스케줄러가 부르는 단일 타깃 진입점.
@@ -63,20 +62,14 @@ public class SeatIngestService {
      *  *    스케줄러의 진입점(호출당함)
      */
     @Transactional
-    public void ingestOneTarget(String pblibId, String stdgCd, String rdrmId, int numOfRows) {
+    public void ingestAll(String pblibId, String stdgCd, String rdrmId, int numOfRows) {
         int pageNo = 1;
         int totalRaw = 0;
         int totalCur = 0;
 
-        // nomOfRows 방어
-        if (numOfRows <= 0) {
-            log.warn("SeatIngestService - numOfRows <= 0 방어, 1로 보정");
-            numOfRows = 1;
-        }
-
         while (true) {
-            if (pageNo > MAX_PAGES) {
-                log.warn("SeatIngestService - 페이지 상한 도달 → 종료 - pblibId:{}, rdrmId:{}", MAX_PAGES, pblibId, rdrmId);
+            if (pageNo > props.maxPages()) {
+                log.warn("SeatIngestService - 페이지 상한 도달 → 종료 - pblibId:{}, rdrmId:{}", props.maxPages(), pblibId, rdrmId);
                 break;
             }
 
@@ -119,13 +112,8 @@ public class SeatIngestService {
             }
             pageNo++;
         }
-        // CHANGED: 전량일 경우 'ALL'로 표시
-        String filterLabel = (pblibId == null && stdgCd == null && rdrmId == null)
-                ? "ALL"
-                : String.format("pblibId=%s, stdgCd=%s, rdrmId=%s", pblibId, stdgCd, rdrmId);
-
-        log.info("SeatIngestService - done (filter: {}), rawInserted={}, currentUpserted={}",
-                filterLabel, totalRaw, totalCur);
+        log.info("SeatIngestService - done (ALL), rawInserted={}, currentUpserted={}",
+                totalRaw, totalCur);
     }
 
     /**

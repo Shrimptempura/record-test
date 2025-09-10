@@ -9,5 +9,5 @@ public record SeatIngestProps(
         boolean enabled,
         String cron,
         int numOfRows,
-        List<String> targets
+        int maxPages
 ) { }

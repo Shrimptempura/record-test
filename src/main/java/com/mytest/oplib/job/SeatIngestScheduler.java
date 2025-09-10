@@ -7,9 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
-import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -39,7 +37,7 @@ public class SeatIngestScheduler {
             log.info("SeatIngestScheduler - 시작 - numOfRows={}", props.numOfRows());
 
             // 타깃 없이 전체 수집
-            service.ingestOneTarget(null, null, null, props.numOfRows());
+            service.ingestAll(null, null, null, props.numOfRows());
             log.info("SeatIngestScheduler - 전체 대상 수집 완료");
         } catch (Exception e) {
             log.error("SeatIngestScheduler - 작업 중 예외 발생", e);
