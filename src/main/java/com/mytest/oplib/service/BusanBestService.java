@@ -14,6 +14,7 @@ import org.springframework.web.util.UriUtils;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -83,7 +84,8 @@ public class BusanBestService {
      * 2) 프런트가 쓰기 쉬운 요약 리스트
      */
     public BookBestPage fetchSimple(int pageNo, int numOfRows, String title, String author) {
-        BookBestResponse res = fetch(pageNo, numOfRows, title, author);
+        // 항상 100건 받기
+        BookBestResponse res = fetch(1, 100, title, author);
 
         List<BookBestResponse.Item> src = res.response().body().items().item();
         List<BookBestView> items = new ArrayList<>(src.size());
@@ -92,9 +94,22 @@ public class BusanBestService {
             items.add(new BookBestView(it.rank(), it.title(), it.author(), it.lib_name(), it.image()));
         }
 
-        int totalCount = Integer.parseInt(res.response().body().totalCount());
+//        int totalCount = Integer.parseInt(res.response().body().totalCount());
+        int totalCount = items.size();
 
-        return new BookBestPage(items, pageNo, numOfRows, totalCount);
+        // 방어로직
+        int safeSize = (numOfRows <= 0) ? 20 : Math.min(numOfRows, 100);
+        int safePage = (pageNo <= 1) ? 1 : pageNo;
+        int from = (safePage - 1) * safeSize;
+        int to = Math.min(from + safeSize, totalCount);
+
+        items.sort(Comparator.comparingInt(v -> {
+            try { return Integer.parseInt(v.rank().trim()); } catch (Exception e) { return 0; }
+        }));
+
+        List<BookBestView> pageItems = (from >= totalCount) ? List.of() : items.subList(from, to);
+
+        return new BookBestPage(pageItems, safePage, safeSize, totalCount);
     }
 
     /**

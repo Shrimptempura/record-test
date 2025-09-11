@@ -6,5 +6,6 @@ public record BookBestView(
         String title,
         String author,
         String libName,
-        String image
+        String image,
+        String publishYear      // 정렬필드
 ) {}

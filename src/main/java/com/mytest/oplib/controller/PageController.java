@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,5 +41,14 @@ public class PageController {
         model.addAttribute("nextPage", nextPage);
 
         return "books";     // template/books.html
+    }
+
+    @GetMapping(value = "/books/debug/raw", produces = "application/json; charset=UTF-8")
+    public @ResponseBody String booksDebugRaw(@RequestParam(defaultValue = "1") int pageNo,
+                                              @RequestParam(defaultValue = "100") int numOfRows,
+                                              @RequestParam(required = false) String title,
+                                              @RequestParam(required = false) String author) {
+        // 주간 TOP 100 확인용: 기본 100건
+        return busanBestService.fetchRawJson(pageNo, numOfRows, title, author);
     }
 }

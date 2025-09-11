@@ -38,6 +38,7 @@ public class SeatOpenApiClient {
                 .queryParam("serviceKey", props.getServiceKey().trim())
                 .queryParam("type", "json");
 
+        // 부분
         if (StringUtils.hasText(pblibId)) {
             builder.queryParam("pblibId", pblibId.trim());
         }
