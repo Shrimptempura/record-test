@@ -46,6 +46,13 @@
 
     <input type="text" name="title" placeholder="제목" th:value="${title}">
     <input type="text" name="author" placeholder="저자" th:value="${author}">
+
+    <select name="sort">
+        <option th:value="'RANK_ASC'" th:selected="${sort=='RANK_ASC'}">순위순</option>
+        <option th:value="'PUBLISH_YEAR_DESC'" th:selected="${sort=='PUBLISH_YEAR_DESC'}">발행년도 최신순</option>
+        <option th:value="'PUBLISH_YEAR_ASC'" th:selected="${sort=='PUBLISH_YEAR_ASC'}">발행년도 오래된순</option>
+    </select>
+
     <button type="submit">검색</button>
     <a th:href="@{/books(pageNo=1, numOfRows=${numOfRows})}">검색 초기화</a>
 </form>
@@ -56,6 +63,7 @@
         <img th:src="${#strings.isEmpty(b.image) ? '/img/noimg.png' : b.image}" alt="cover"/>
         <div><b th:text="${b.title}">제목</b></div>
         <div th:text="${b.author}">저자</div>
+        <div th:text="${b.publishYear}">발행년도</div>
         <div style="font-size:12px;color:gray" th:text="${b.libName}">도서관</div>
     </div>
 </div>
@@ -63,12 +71,12 @@
 <!-- 페이징 -->
 <div class="pager">
     <a th:if="${hasPrev}"
-       th:href="@{/books(pageNo=${prevPage}, numOfRows=${numOfRows}, title=${title}, author=${author})}">
+       th:href="@{/books(pageNo=${prevPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
         ◀ 이전
     </a>
     <span th:text="${pageNo}">1</span>
     <a th:if="${hasNext}"
-       th:href="@{/books(pageNo=${nextPage}, numOfRows=${numOfRows}, title=${title}, author=${author})}">
+       th:href="@{/books(pageNo=${nextPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
         다음 ▶
     </a>
     <span th:text="'총 ' + ${totalCount} + '권'">총 0권</span>

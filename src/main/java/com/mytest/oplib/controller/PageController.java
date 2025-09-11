@@ -1,5 +1,6 @@
 package com.mytest.oplib.controller;
 
+import com.mytest.oplib.service.BookSort;
 import com.mytest.oplib.service.BusanBestService;
 import com.mytest.oplib.service.BusanBestService.BookBestPage;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,17 @@ public class PageController {
             @RequestParam(defaultValue = "20") int numOfRows,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String author,
+            @RequestParam(required = false, defaultValue = "RANK_ASC") String sort,
             Model model) {
-        BookBestPage page = busanBestService.fetchSimple(pageNo, numOfRows, title, author);
+
+        BookSort sortKey;
+        try {
+            sortKey = BookSort.valueOf(sort.toUpperCase());
+        } catch (Exception e) {
+            sortKey = BookSort.RANK_ASC;
+        }
+
+        BookBestPage page = busanBestService.fetchSimple(pageNo, numOfRows, title, author, sortKey);
 
         // 페이징 계산
         boolean hasPrev = page.pageNo() > 1;
@@ -35,6 +45,7 @@ public class PageController {
         model.addAttribute("totalCount", page.totalCount());
         model.addAttribute("title", title);
         model.addAttribute("author", author);
+        model.addAttribute("sort", sortKey.name());
         model.addAttribute("hasPrev", hasPrev);
         model.addAttribute("hasNext", hasNext);
         model.addAttribute("prevPage", prevPage);

@@ -58,7 +58,6 @@ public class BusanBestService {
      */
     public BookBestResponse fetch(int pageNo, int numOfRows, String title, String author) {
         URI uri = buildUri(pageNo, numOfRows, title, author);
-        log.debug("Busan API GET: {}", uri);        // 키가 URL에 노출됨으로 운영로그에 남기지 않기
 
         // 원래 try-catch나 전역 예외 처리함
         BookBestResponse res = restClient.get()
@@ -83,29 +82,46 @@ public class BusanBestService {
     /**
      * 2) 프런트가 쓰기 쉬운 요약 리스트
      */
-    public BookBestPage fetchSimple(int pageNo, int numOfRows, String title, String author) {
+    public BookBestPage fetchSimple(int pageNo, int numOfRows, String title, String author, BookSort sort) {
         // 항상 100건 받기
         BookBestResponse res = fetch(1, 100, title, author);
+
+        BookBestResponse.Body body = res.response().body();
+        if (body == null || body.items() == null || body.items().item() == null) {
+            return new BookBestPage(List.of(), 1, (numOfRows <= 0) ? 20 : numOfRows, 0);
+        }
 
         List<BookBestResponse.Item> src = res.response().body().items().item();
         List<BookBestView> items = new ArrayList<>(src.size());
 
         for (BookBestResponse.Item it : src) {
-            items.add(new BookBestView(it.rank(), it.title(), it.author(), it.lib_name(), it.image()));
+            items.add(new BookBestView(it.rank(), it.title(), it.author(), it.lib_name(), it.image(), it.publish_year()));
         }
 
-//        int totalCount = Integer.parseInt(res.response().body().totalCount());
-        int totalCount = items.size();
+        // 정렬(기본: rank ASC)
+        BookSort s = (sort == null) ? BookSort.RANK_ASC : sort;
+        switch (s) {
+            case PUBLISH_YEAR_DESC -> items.sort(
+                    Comparator.comparingInt((BookBestView v) -> parseYear(v.publishYear()))
+                            .reversed()
+                            .thenComparingInt(v -> parseInt(v.rank()))
+            );
 
-        // 방어로직
+            case PUBLISH_YEAR_ASC -> items.sort(
+                    Comparator.comparingInt((BookBestView v) -> parseYear(v.publishYear()))
+                            .thenComparingInt(v -> parseInt(v.rank()))
+            );
+
+            case RANK_ASC -> items.sort(
+                    Comparator.comparingInt(v -> parseInt(v.rank()))
+            );
+        }
+
+        int totalCount = items.size();
         int safeSize = (numOfRows <= 0) ? 20 : Math.min(numOfRows, 100);
         int safePage = (pageNo <= 1) ? 1 : pageNo;
         int from = (safePage - 1) * safeSize;
         int to = Math.min(from + safeSize, totalCount);
-
-        items.sort(Comparator.comparingInt(v -> {
-            try { return Integer.parseInt(v.rank().trim()); } catch (Exception e) { return 0; }
-        }));
 
         List<BookBestView> pageItems = (from >= totalCount) ? List.of() : items.subList(from, to);
 
@@ -119,5 +135,29 @@ public class BusanBestService {
     public String fetchRawJson(int pageNo, int numOfRows, String title, String author) {
         URI uri = buildUri(pageNo, numOfRows, title, author);
         return restClient.get().uri(uri).retrieve().body(String.class);
+    }
+
+    private static int parseYear(String year) {
+        if (year == null) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(year.trim());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static int parseInt(String str) {
+        if (str == null) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(str.trim());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 }
