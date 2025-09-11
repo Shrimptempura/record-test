@@ -6,7 +6,7 @@
 <mapper namespace="com.mytest.oplib.dao.BookBestMapper">
 
     <!-- 테이블 삽입 -->
-    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="bookdId">
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="bookId">
         INSERT INTO book_best (
             book_rank,
             title,
@@ -42,7 +42,12 @@
             lib_name AS libName,
             fetched_at AS fetchedAt
         FROM book_best
-        ORDER BY ${orderBy}
+        ORDER BY
+            <choose>
+                <when test="orderBy == 'PUBLISH_YEAR_DESC'">publish_year DESC, book_rank ASC</when>
+                <when test="orderBy == 'PUBLISH_YEAR_ASC'">publish_year ASC, book_rank ASC</when>
+                <otherwise>book_rank ASC</otherwise>
+            </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
