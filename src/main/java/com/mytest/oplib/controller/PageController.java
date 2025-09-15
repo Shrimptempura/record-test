@@ -24,14 +24,15 @@ public class PageController {
     public String books(@RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "20") int numOfRows,
             @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String author,
             Model model) {
 
         // sort 문자열 -> enum 변환 (안전 변환, 기본값 RANK_ASC)
         BookSort order = queryService.parseOrderOrDefault(sort);
 
-        List<BookBestRow> rows = queryService.page(pageNo, numOfRows, order);
-        int total = queryService.count();
-
+        List<BookBestRow> rows = queryService.page(pageNo, numOfRows, order, title, author);
+        int total = queryService.count(title, author);
 
         // 페이징 계산
         boolean hasPrev = pageNo > 1;
@@ -48,6 +49,8 @@ public class PageController {
         model.addAttribute("hasNext", hasNext);
         model.addAttribute("prevPage", prevPage);
         model.addAttribute("nextPage", nextPage);
+        model.addAttribute("title", title);
+        model.addAttribute("author", author);
 
         return "books";     // template/books.html
     }

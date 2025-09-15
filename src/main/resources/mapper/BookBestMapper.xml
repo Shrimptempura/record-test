@@ -6,7 +6,7 @@
 <mapper namespace="com.mytest.oplib.dao.BookBestMapper">
 
     <!-- 테이블 삽입 -->
-    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="bookId">
+    <insert id="batchInsert">
         INSERT INTO book_best (
             book_rank,
             title,
@@ -16,7 +16,7 @@
             publish_year,
             fetched_at)
         VALUES
-            <foreach collection="list" item="row" separator=",">
+            <foreach collection="rows" item="row" separator=",">
                 (#{row.bookRank},
                 #{row.title},
                 #{row.author},
@@ -31,7 +31,6 @@
         DELETE FROM book_best
     </delete>
 
-    // 페이지 조회
     <select id="selectPage" resultType="com.mytest.oplib.dto.BookBestRow">
         SELECT
             book_id AS bookId,
@@ -39,19 +38,37 @@
             title,
             author,
             lib_name AS libName,
+            image,
+            publish_year AS publishYear,
             fetched_at AS fetchedAt
         FROM book_best
+        <where>
+            <if test="title != null and title != ''">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="author != null and author != ''">
+                AND author LIKE CONCAT('%', #{author}, '%')
+            </if>
+        </where>
         ORDER BY
-            <choose>
-                <when test="orderBy == 'PUBLISH_YEAR_DESC'">publish_year DESC, book_rank ASC</when>
-                <when test="orderBy == 'PUBLISH_YEAR_ASC'">publish_year ASC, book_rank ASC</when>
-                <otherwise>book_rank ASC</otherwise>
-            </choose>
+        <choose>
+            <when test="orderBy == 'PUBLISH_YEAR_DESC'">publish_year DESC, book_rank ASC</when>
+            <when test="orderBy == 'PUBLISH_YEAR_ASC'">publish_year ASC, book_rank ASC</when>
+            <otherwise>book_rank ASC</otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countAll" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM book_best
+        <where>
+            <if test="title != null and title != ''">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="author != null and author != ''">
+                AND author LIKE CONCAT('%', #{author}, '%')
+            </if>
+        </where>
     </select>
 
 </mapper>

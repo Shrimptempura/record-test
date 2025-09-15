@@ -1,10 +1,13 @@
 package com.mytest.oplib.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mytest.oplib.config.BusanBestProps;
 import com.mytest.oplib.dto.BookBestResponse;
 import com.mytest.oplib.dto.BookBestView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -24,6 +27,8 @@ public class BusanBestService {
     private final BusanBestProps props;
 
     public record BookBestPage(List<BookBestView> items, int pageNo, int numOfRows, int totalCount) {}
+
+    private final ObjectMapper objectMapper;
 
     /**
      * 외부 API 최종 URI 조립

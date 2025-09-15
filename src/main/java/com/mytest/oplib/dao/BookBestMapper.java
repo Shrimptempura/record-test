@@ -17,7 +17,10 @@ public interface BookBestMapper {
 
     List<BookBestRow> selectPage(@Param("orderBy") String orderBy,
                                  @Param("limit") int limit,
-                                 @Param("offset") int offset);
+                                 @Param("offset") int offset,
+                                 @Param("title") String title,
+                                 @Param("author") String author);
 
-    int countAll();
+    int countAll(@Param("title") String title,
+                 @Param("author") String author);
 }
