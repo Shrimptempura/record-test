@@ -13,7 +13,7 @@ public interface BookBestMapper {
     int deleteAll();
 
     // 테이블 대입
-    int batchInsert(@Param("rows") List<BookBestMapper> rows);
+    int batchInsert(@Param("rows") List<BookBestRow> rows);
 
     List<BookBestRow> selectPage(@Param("orderBy") String orderBy,
                                  @Param("limit") int limit,

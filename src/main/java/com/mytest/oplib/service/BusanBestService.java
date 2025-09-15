@@ -13,8 +13,6 @@ import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -79,85 +77,8 @@ public class BusanBestService {
         return res;
     }
 
-    /**
-     * 2) 프런트가 쓰기 쉬운 요약 리스트
-     */
-    public BookBestPage fetchSimple(int pageNo, int numOfRows, String title, String author, BookSort sort) {
-        // 항상 100건 받기
-        BookBestResponse res = fetch(1, 100, title, author);
-
-        BookBestResponse.Body body = res.response().body();
-        if (body == null || body.items() == null || body.items().item() == null) {
-            return new BookBestPage(List.of(), 1, (numOfRows <= 0) ? 20 : numOfRows, 0);
-        }
-
-        List<BookBestResponse.Item> src = res.response().body().items().item();
-        List<BookBestView> items = new ArrayList<>(src.size());
-
-        for (BookBestResponse.Item it : src) {
-            items.add(new BookBestView(it.rank(), it.title(), it.author(), it.lib_name(), it.image(), it.publish_year()));
-        }
-
-        // 정렬(기본: rank ASC)
-        BookSort s = (sort == null) ? BookSort.RANK_ASC : sort;
-        switch (s) {
-            case PUBLISH_YEAR_DESC -> items.sort(
-                    Comparator.comparingInt((BookBestView v) -> parseYear(v.publishYear()))
-                            .reversed()
-                            .thenComparingInt(v -> parseInt(v.rank()))
-            );
-
-            case PUBLISH_YEAR_ASC -> items.sort(
-                    Comparator.comparingInt((BookBestView v) -> parseYear(v.publishYear()))
-                            .thenComparingInt(v -> parseInt(v.rank()))
-            );
-
-            case RANK_ASC -> items.sort(
-                    Comparator.comparingInt(v -> parseInt(v.rank()))
-            );
-        }
-
-        int totalCount = items.size();
-        int safeSize = (numOfRows <= 0) ? 20 : Math.min(numOfRows, 100);
-        int safePage = (pageNo <= 1) ? 1 : pageNo;
-        int from = (safePage - 1) * safeSize;
-        int to = Math.min(from + safeSize, totalCount);
-
-        List<BookBestView> pageItems = (from >= totalCount) ? List.of() : items.subList(from, to);
-
-        return new BookBestPage(pageItems, safePage, safeSize, totalCount);
-    }
-
-    /**
-     * (선택) 원문 JSON 문자열 그대로 반환하고 싶을 때
-     *  - 초기 점검용 엔드포인트에서 편함
-     */
     public String fetchRawJson(int pageNo, int numOfRows, String title, String author) {
         URI uri = buildUri(pageNo, numOfRows, title, author);
         return restClient.get().uri(uri).retrieve().body(String.class);
-    }
-
-    private static int parseYear(String year) {
-        if (year == null) {
-            return 0;
-        }
-
-        try {
-            return Integer.parseInt(year.trim());
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    private static int parseInt(String str) {
-        if (str == null) {
-            return 0;
-        }
-
-        try {
-            return Integer.parseInt(str.trim());
-        } catch (Exception e) {
-            return 0;
-        }
     }
 }

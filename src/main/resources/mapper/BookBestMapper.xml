@@ -27,7 +27,6 @@
             </foreach>
     </insert>
 
-    <!-- 전체 삭제 -->
     <delete id="deleteAll">
         DELETE FROM book_best
     </delete>
