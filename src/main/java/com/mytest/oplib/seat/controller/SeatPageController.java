@@ -2,6 +2,7 @@ package com.mytest.oplib.seat.controller;
 
 import com.mytest.oplib.seat.dto.SeatSnapshotView;
 import com.mytest.oplib.seat.service.SeatQueryService;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+@Hidden
 @Controller
 @RequestMapping("/seats")
 @RequiredArgsConstructor
