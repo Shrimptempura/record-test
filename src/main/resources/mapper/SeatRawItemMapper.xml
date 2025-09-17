@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.mytest.oplib.dao.SeatRawItemMapper">
+<mapper namespace="com.mytest.oplib.seat.repository.SeatRawItemMapper">
 
-    <insert id="upsertRaw" parameterType="com.mytest.oplib.dto.SeatRawUpsertCmd">
+    <insert id="upsertRaw" parameterType="com.mytest.oplib.seat.dto.SeatRawUpsertCmd">
         INSERT INTO seat_raw_item (
             source,
             stdg_cd,

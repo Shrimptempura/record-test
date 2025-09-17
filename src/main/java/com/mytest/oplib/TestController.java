@@ -1,6 +1,6 @@
 package com.mytest.oplib;
 
-import com.mytest.oplib.config.BusanBestProps;
+import com.mytest.oplib.best.config.BusanBestProps;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

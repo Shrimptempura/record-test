@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.mytest.oplib.dao.BookBestMapper">
+<mapper namespace="com.mytest.oplib.best.repository.BookBestMapper">
 
     <!-- 테이블 삽입 -->
     <insert id="batchInsert">
@@ -31,7 +31,7 @@
         DELETE FROM book_best
     </delete>
 
-    <select id="selectPage" resultType="com.mytest.oplib.dto.BookBestRow">
+    <select id="selectPage" resultType="com.mytest.oplib.best.dto.BookBestRow">
         SELECT
             book_id AS bookId,
             book_rank AS bookRank,

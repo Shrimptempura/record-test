@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.mytest.oplib.dao.SeatCurrentRoomMapper">
+<mapper namespace="com.mytest.oplib.seat.repository.SeatCurrentRoomMapper">
 
     <!-- 원본데이터를 서브테이블에 전달 -->
     <insert id="materializeLatestByKey">
@@ -71,7 +71,7 @@
     </insert>
 
     <!-- pk 조회(pblib_id, rdrm_id) -->
-    <select id="findByKey" resultType="com.mytest.oplib.dto.SeatSnapshotView">
+    <select id="findByKey" resultType="com.mytest.oplib.seat.dto.SeatSnapshotView">
         SELECT
             pblib_id AS pblibId,
             rdrm_id AS rdrmId,
@@ -91,7 +91,7 @@
     </select>
 
     <!-- 검색 + 페이징 -->
-    <select id="search" resultType="com.mytest.oplib.dto.SeatSnapshotView">
+    <select id="search" resultType="com.mytest.oplib.seat.dto.SeatSnapshotView">
         SELECT
             pblib_id AS pblibId,
             rdrm_id AS rdrmId,
