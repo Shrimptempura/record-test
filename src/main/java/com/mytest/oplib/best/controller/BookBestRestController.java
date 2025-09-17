@@ -1,6 +1,7 @@
 package com.mytest.oplib.best.controller;
 
 import com.mytest.oplib.best.dto.BookBestPageResponse;
+import com.mytest.oplib.best.dto.BookBestRequest;
 import com.mytest.oplib.best.dto.BookBestRow;
 import com.mytest.oplib.best.dto.BookSort;
 import com.mytest.oplib.best.service.BusanBestQueryService;
@@ -11,24 +12,24 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @Tag(name = "Books", description = "주간 인기 대출 도서 API")
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping("/api/v1/books")
 public class BookBestRestController {
 
     private final BusanBestQueryService queryService;
-    
+
     @Operation(
             summary = "주간 인기 대출 도서 조회",
             description = "부산 지역 도서관 기준의 인기 대출 도서를 페이지 단위로 조회 "
@@ -49,8 +50,10 @@ public class BookBestRestController {
 
     @GetMapping
     public BookBestPageResponse getBooks(
+            @Valid @ModelAttribute BookBestRequest req,
+
             @Parameter(description = "페이지 번호(1-base)", example = "1")
-            @Min(1) @RequestParam(defaultValue = "1") int pageNo,
+            @Min(1)@RequestParam(defaultValue = "1") int pageNo,
 
             @Parameter(description = "페이지 크기", example = "20")
             @Min(1) @Max(100) @RequestParam(name="numOfRows", defaultValue = "20") int pageSize,
