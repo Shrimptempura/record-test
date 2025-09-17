@@ -1,6 +1,6 @@
 package com.mytest.oplib.best.dto;
 
-// 프런트용 요약 dto
+// 프런트용 요약 dto(SSR)
 public record BookBestView(
         String rank,
         String title,

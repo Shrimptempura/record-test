@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
 
+// 외부 OpenAPI 응답 매핑용
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record BookBestResponse(Envelope response) {
 

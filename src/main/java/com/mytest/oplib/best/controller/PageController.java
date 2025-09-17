@@ -1,8 +1,9 @@
 package com.mytest.oplib.best.controller;
 
 import com.mytest.oplib.best.dto.BookBestRow;
-import com.mytest.oplib.seat.service.BookSort;
+import com.mytest.oplib.best.dto.BookSort;
 import com.mytest.oplib.best.service.BusanBestQueryService;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+@Hidden
 @Controller
 @RequiredArgsConstructor
 public class PageController {

@@ -1,8 +1,8 @@
 package com.mytest.oplib.best.service;
 
+import com.mytest.oplib.best.dto.BookSort;
 import com.mytest.oplib.best.repository.BookBestMapper;
 import com.mytest.oplib.best.dto.BookBestRow;
-import com.mytest.oplib.seat.service.BookSort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
