@@ -4,6 +4,59 @@
     <meta charset="UTF-8">
     <title>공공도서관 열람실 실시간</title>
     <style>
+        /* 공통 레이아웃 */
+        .container {
+            margin: 0 auto;
+            width: 70%;
+        }
+
+        /* 상단 한 줄 헤더: 좌측 제목, 우측 탭 */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: block;
+            border-bottom: 1px solid #ececec;
+            background: #fff;
+        }
+
+        .topbar-inner {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .site-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        .mini-tabs {
+            margin-left: 40px; /* 제목과의 간격 */
+            display: flex;
+            gap: 16px;
+        }
+
+        .mini-tab {
+            text-decoration: none;
+            color: #444;
+            padding: 8px 4px;
+            border-bottom: 2px solid transparent;
+        }
+
+        .mini-tab:hover {
+            color: #2a7de1;
+        }
+
+        .mini-tab.active {
+            color: #2a7de1;
+            font-weight: 700;
+            border-bottom-color: #2a7de1;
+        }
+
+        /* 이하 기존 좌석 페이지 스타일 */
         table {
             border-collapse: collapse;
             width: 100%;
@@ -33,6 +86,19 @@
             align-items: center;
         }
 
+        /* 페이징 링크 스타일 */
+        .pager a {
+            display: inline-block;
+            padding: 4px 6px;
+            text-decoration: none;   /* 밑줄 제거 */
+            color: #1c46cc;          /* 항상 파란색 */
+            font-size: 13px;
+        }
+
+        .pager a:hover {
+            text-decoration: underline; /* hover 시만 밑줄 */
+        }
+
         .spacer {
             flex: 1;
         }
@@ -43,63 +109,88 @@
     </style>
 </head>
 <body>
-<h1>공공도서관 열람실 실시간</h1>
 
-<form class="toolbar" th:action="@{/seats}" method="get">
-    <input type="text" name="name" placeholder="도서관명 (예: 중앙도서관)" th:value="${name}">
-    <input type="text" name="region" placeholder="지자체명 (예: 수원시)" th:value="${region}">
-    <input type="hidden" name="stdgCd" th:value="${stdgCd}">
-    <label>
-        표시개수
-        <input type="number" name="size" min="1" max="500" th:value="${size}">
-    </label>
-    <input type="hidden" name="page" value="1"/> <!-- 검색 시 1페이지로 -->
-    <button type="submit">검색</button>
+<!-- 공통 헤더 (주간 인기/좌석 현황 탭)-->
+<div class="topbar">
+    <div class="container topbar-inner">
+        <div class="site-title">라이브러리</div>
+        <nav class="mini-tabs">
+            <a class="mini-tab"
+               th:classappend="${activeTab}=='books' ? ' active' : ''"
+               th:href="@{/books}">주간 인기</a>
+            <a class="mini-tab"
+               th:classappend="${activeTab}=='seats' ? ' active' : ''"
+               th:href="@{/seats}">좌석 현황</a>
+        </nav>
+    </div>
+</div>
+<!-- 공통 헤더 끝 -->
 
-    <span class="spacer"></span>
-</form>
+<div class="container">
+    <!-- 기존 콘텐츠 시작 -->
 
-<table>
-    <thead>
-    <tr>
-        <th>도서관</th>
-        <th>지자체</th>
-        <th>열람실</th>
-        <th>방문자</th>
-        <th>총좌석</th>
-        <th>사용중</th>
-        <th>예약</th>
-        <th>잔여</th>
-        <th>업데이트</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="it : ${items}">
-        <!-- SeatSnapshotView 필드명에 맞춤 -->
-        <td th:text="${it.pblibNm}">도서관</td>
-        <td th:text="${it.lclgvNm}">지자체</td>
-        <td th:text="${it.rdrmNm}">열람실</td>
-        <td th:text="${it.nowVstrCnt}">0</td>
-        <td th:text="${it.tseatCnt}">0</td>
-        <td th:text="${it.useSeatCnt}">0</td>
-        <td th:text="${it.rsvtSeatCnt}">0</td>
-        <td th:text="${it.rmndSeatCnt}">0</td>
-        <td th:text="${it.updatedAt}">2025-09-01 00:00:00</td>
-    </tr>
-    </tbody>
-</table>
+    <form class="toolbar" th:action="@{/seats}" method="get">
+        <input type="text" name="name" placeholder="도서관명 (예: 중앙도서관)" th:value="${name}">
+        <input type="text" name="region" placeholder="지자체명 (예: 수원시)" th:value="${region}">
+        <input type="hidden" name="stdgCd" th:value="${stdgCd}">
+        <label>
+            표시개수
+            <input type="number" name="size" min="1" max="500" th:value="${size}">
+        </label>
+        <input type="hidden" name="page" value="1"/> <!-- 검색 시 1페이지로 -->
+        <button type="submit">검색</button>
 
-<div class="pager">
-    <a th:if="${page > 1}" th:href="@{/seats(page=1, size=${size}, name=${name}, region=${region})}">⏮ 처음</a>
-    <a th:if="${hasPrev}" th:href="@{/seats(page=${prevPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">◀ 이전</a>
-    <span th:text="${page}">1</span>
-    <span>/</span>
-    <span th:text="${totalPages}">1</span>
-    <a th:if="${hasNext}" th:href="@{/seats(page=${nextPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">다음 ▶</a>
-    <a th:if="${page < totalPages}" th:href="@{/seats(page=${totalPages}, size=${size}, name=${name}, region=${region})}">마지막 ⏭</a>
+        <span class="spacer"></span>
+    </form>
 
-    <span class="spacer"></span>
-    <span th:text="|총 ${total}건|">총 0건</span>
+    <table>
+        <thead>
+        <tr>
+            <th>도서관</th>
+            <th>지자체</th>
+            <th>열람실</th>
+            <th>방문자</th>
+            <th>총좌석</th>
+            <th>사용중</th>
+            <th>예약</th>
+            <th>잔여</th>
+            <th>업데이트</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="it : ${items}">
+            <td th:text="${it.pblibNm}">도서관</td>
+            <td th:text="${it.lclgvNm}">지자체</td>
+            <td th:text="${it.rdrmNm}">열람실</td>
+            <td th:text="${it.nowVstrCnt}">0</td>
+            <td th:text="${it.tseatCnt}">0</td>
+            <td th:text="${it.useSeatCnt}">0</td>
+            <td th:text="${it.rsvtSeatCnt}">0</td>
+            <td th:text="${it.rmndSeatCnt}">0</td>
+            <td th:text="${it.updatedAt}">2025-09-01 00:00:00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="pager">
+        <a th:if="${page > 1}" th:href="@{/seats(page=1, size=${size}, name=${name}, region=${region})}">⏮ 처음</a>
+        <a th:if="${hasPrev}"
+           th:href="@{/seats(page=${prevPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">◀
+            이전</a>
+        <span th:text="${page}">1</span>
+        <span>/</span>
+        <span th:text="${totalPages}">1</span>
+        <a th:if="${hasNext}"
+           th:href="@{/seats(page=${nextPage}, size=${size}, name=${name}, region=${region}, stdgCd=${stdgCd})}">다음
+            ▶</a>
+        <a th:if="${page < totalPages}"
+           th:href="@{/seats(page=${totalPages}, size=${size}, name=${name}, region=${region})}">마지막 ⏭</a>
+
+        <span class="spacer"></span>
+        <span th:text="|총 ${total}건|">총 0건</span>
+    </div>
+
+    <!-- 기존 콘텐츠 끝 -->
 </div>
 
 </body>

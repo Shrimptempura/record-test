@@ -1,86 +1,199 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>주간 인기 대출 도서</title>
+    <meta charset="UTF-8" />
+    <title>라이브러리</title>
     <style>
+        /* 레이아웃 */
+        .container { margin: 0 auto; width: 70%; }
+
+        /* 상단 한 줄 헤더: 좌측 제목, 우측 탭 */
+        .topbar {
+            position: sticky; top: 0; z-index: 50;
+            display: block;
+            border-bottom: 1px solid #ececec;
+            background: #fff;
+        }
+        .topbar-inner {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .site-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+        .mini-tabs {
+            margin-left: 40px;
+            display: flex;
+            gap: 16px;
+        }
+        .mini-tab {
+            text-decoration: none;
+            color: #444;
+            padding: 8px 4px;
+            border-bottom: 2px solid transparent;
+        }
+        .mini-tab:hover { color: #2a7de1; }
+        .mini-tab.active {
+            color: #2a7de1;
+            font-weight: 700;
+            border-bottom-color: #2a7de1;
+        }
+
+        /* 검색 툴바 */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin: 16px 0 12px;
+        }
+
+        /* 툴바 내부 요소 공통 스타일 */
+        .toolbar input,
+        .toolbar select,
+        .toolbar button,
+        .toolbar .btn-reset {
+            box-sizing: border-box;   /* 높이 계산 통일 */
+            height: 28px;
+            padding: 0 8px;           /* 수직 패딩 최소화 */
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* 버튼류(검색/초기화) 동일화 */
+        .toolbar button,
+        .toolbar .btn-reset {
+            display: inline-flex;      /* 텍스트 수직 중앙 */
+            align-items: center;
+            justify-content: center;
+            line-height: 28px;         /* 줄높이 = 높이 */
+            background: #f8f8f8;
+            cursor: pointer;
+        }
+        .toolbar button:hover,
+        .toolbar .btn-reset:hover {
+            background: #eee;
+            border-color: #aaa;
+        }
+
+        /* a태그 초기화 버튼을 버튼처럼 */
+        .btn-reset {
+            text-decoration: none;
+            color: #000;
+        }
+
+        /* 카드 그리드 */
         .grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 16px;
         }
-
         .card {
             border: 1px solid #ddd;
-            padding: 8px;
+            border-radius: 8px;   /* 둥근 모서리 */
+            padding: 12px;
             text-align: center;
+            background: #fff;
         }
-
         .card img {
             width: 100px;
             height: 150px;
             object-fit: cover;
+            border-radius: 4px;
         }
 
-        .toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
+        /* 페이지네이션 */
         .pager {
             margin-top: 16px;
             display: flex;
-            gap: 12px;
+            justify-content: space-between;  /* 좌: 이전/번호/다음, 우: 총 n권 */
             align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        /* 페이지 이동 링크 스타일 */
+        .pager a {
+            text-decoration: none;   /* 밑줄 제거 */
+            color: #335dff;          /* 항상 동일한 파란색 */
+        }
+        .pager a:visited {
+            color: #335dff;          /* 방문 후에도 색 유지 */
+        }
+        .pager a:hover {
+            text-decoration: underline; /* hover 시만 밑줄 */
         }
     </style>
 </head>
 <body>
-<h1>주간 인기 대출 도서</h1>
 
-<!-- 검색 폼 -->
-<form class="toolbar" th:action="@{/books}" method="get">
-    <input type="hidden" name="pageNo" value="1"/>
-    <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
-
-    <input type="text" name="title" placeholder="제목" th:value="${title}">
-    <input type="text" name="author" placeholder="저자" th:value="${author}">
-
-    <select name="sort">
-        <option th:value="'RANK_ASC'" th:selected="${sort=='RANK_ASC'}">순위순</option>
-        <option th:value="'PUBLISH_YEAR_DESC'" th:selected="${sort=='PUBLISH_YEAR_DESC'}">발행년도 최신순</option>
-        <option th:value="'PUBLISH_YEAR_ASC'" th:selected="${sort=='PUBLISH_YEAR_ASC'}">발행년도 오래된순</option>
-    </select>
-
-    <button type="submit">검색</button>
-    <a th:href="@{/books(pageNo=1, numOfRows=${numOfRows})}">검색 초기화</a>
-</form>
-
-<!-- 그리드 -->
-<div class="grid">
-    <div class="card" th:each="b : ${books}">
-        <img th:src="${#strings.isEmpty(b.image) ? '/img/noimg.png' : b.image}" alt="cover"/>
-        <div><b th:text="${b.title}">제목</b></div>
-        <div th:text="${b.author}">저자</div>
-        <div th:text="${b.publishYear}">발행년도</div>
-        <div style="font-size:12px;color:gray" th:text="${b.libName}">도서관</div>
+<!-- 상단 헤더 -->
+<div class="topbar">
+    <div class="container topbar-inner">
+        <div class="site-title">라이브러리</div>
+        <nav class="mini-tabs">
+            <!-- 이 템플릿이 '주간 인기' 화면이라면 activeTab='books' -->
+            <a class="mini-tab" th:classappend="${activeTab}=='books' ? ' active' : ''"
+               th:href="@{/books}">주간 인기</a>
+            <a class="mini-tab" th:classappend="${activeTab}=='seats' ? ' active' : ''"
+               th:href="@{/seats}">좌석 현황</a>
+        </nav>
     </div>
 </div>
 
-<!-- 페이징 -->
-<div class="pager">
-    <a th:if="${hasPrev}"
-       th:href="@{/books(pageNo=${prevPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
-        ◀ 이전
-    </a>
-    <span th:text="${pageNo}">1</span>
-    <a th:if="${hasNext}"
-       th:href="@{/books(pageNo=${nextPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
-        다음 ▶
-    </a>
-    <span th:text="'총 ' + ${totalCount} + '권'">총 0권</span>
-</div>
+<div class="container">
 
+    <!-- 검색 폼 -->
+    <form class="toolbar" th:action="@{/books}" method="get">
+        <input type="hidden" name="pageNo" value="1"/>
+        <input type="hidden" name="numOfRows" th:value="${numOfRows}"/>
+
+        <input type="text" name="title" placeholder="제목" th:value="${title}">
+        <input type="text" name="author" placeholder="저자" th:value="${author}">
+
+        <select name="sort">
+            <option th:value="'RANK_ASC'" th:selected="${sort=='RANK_ASC'}">순위순</option>
+            <option th:value="'PUBLISH_YEAR_DESC'" th:selected="${sort=='PUBLISH_YEAR_DESC'}">발행년도 최신순</option>
+            <option th:value="'PUBLISH_YEAR_ASC'" th:selected="${sort=='PUBLISH_YEAR_ASC'}">발행년도 오래된순</option>
+        </select>
+
+        <button type="submit">검색</button>
+        <a class="btn-reset" th:href="@{/books(pageNo=1, numOfRows=${numOfRows})}">초기화</a>
+    </form>
+
+    <!-- 그리드 -->
+    <div class="grid">
+        <div class="card" th:each="b : ${books}">
+            <img th:src="${#strings.isEmpty(b.image) ? '/img/noimg.png' : b.image}" alt="cover"/>
+            <div><b th:text="${b.title}">제목</b></div>
+
+            <!-- 저자 구분자 `;` → `·`로 치환 -->
+            <div th:text="${#strings.replace(#strings.replace(b.author, '; ', ' · '), ';', ' · ')}">저자</div>
+
+            <div th:text="${b.publishYear}">발행년도</div>
+            <div style="font-size:12px;color:gray" th:text="${b.libName}">도서관</div>
+        </div>
+    </div>
+
+    <!-- 페이징 -->
+    <div class="pager">
+        <div>
+            <a th:if="${hasPrev}"
+               th:href="@{/books(pageNo=${prevPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
+                ◀ 이전
+            </a>
+            <span th:text="${pageNo}">1</span>
+            <a th:if="${hasNext}"
+               th:href="@{/books(pageNo=${nextPage}, numOfRows=${numOfRows}, title=${title}, author=${author}, sort=${sort})}">
+                다음 ▶
+            </a>
+        </div>
+        <span class="total" th:text="'총 ' + ${totalCount} + '권'">총 0권</span>
+    </div>
+
+</div>
 </body>
 </html>

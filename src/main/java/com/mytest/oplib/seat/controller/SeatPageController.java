@@ -51,6 +51,8 @@ public class SeatPageController {
         model.addAttribute("region", region);
         model.addAttribute("stdgCd", stdgCd);
 
+        model.addAttribute("activeTab", "seats");
+
         return "seats"; // templates/seats.html 그대로 사용
     }
 }
